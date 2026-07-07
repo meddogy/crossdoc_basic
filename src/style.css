@@ -10754,3 +10754,192 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .app.basic-product-app .beginner-doc-cards{grid-template-columns:1fr;}
   .app.basic-product-app .mobile-doc-picker .mobile-picker-title b::after{content:' BASIC';color:#2f6fad;margin-left:4px;font-size:11px;}
 }
+
+
+/* Church Docs Kit BASIC 1.0.1 settings panel usability fix */
+.app.basic-product-app .basic-101-settings{
+  gap:12px!important;
+}
+.app.basic-product-app .basic-101-settings .v238-settings-card{
+  overflow:visible!important;
+}
+.app.basic-product-app .basic-101-settings .v238-settings-card summary{
+  min-height:54px!important;
+  border-radius:16px 16px 0 0;
+}
+.app.basic-product-app .basic-101-settings .v238-settings-body{
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+.app.basic-product-app .basic-design-scroll{
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding:14px 14px 18px!important;
+  scrollbar-width:thin;
+}
+.app.basic-product-app .basic-design-scroll::-webkit-scrollbar,
+.app.basic-product-app .basic-output-body .page-placement-controls::-webkit-scrollbar{
+  height:8px;
+}
+.app.basic-product-app .basic-design-scroll::-webkit-scrollbar-thumb,
+.app.basic-product-app .basic-output-body .page-placement-controls::-webkit-scrollbar-thumb{
+  background:#cbd5e1;
+  border-radius:999px;
+}
+.app.basic-product-app .basic-design-scroll::before{
+  content:'좌우로 밀어 더 많은 디자인 옵션을 볼 수 있습니다';
+  display:block;
+  width:max-content;
+  min-width:100%;
+  color:#64748b;
+  font-size:11px;
+  font-weight:800;
+  margin:0 0 8px;
+}
+.app.basic-product-app .basic-design-scroll .font-quick-controls,
+.app.basic-product-app .basic-design-scroll .ribbon-design-tools{
+  min-width:660px!important;
+  width:max-content!important;
+  max-width:none!important;
+  flex-shrink:0!important;
+  overflow:visible!important;
+}
+.app.basic-product-app .basic-design-scroll .font-preset-row,
+.app.basic-product-app .basic-design-scroll .font-detail-row,
+.app.basic-product-app .basic-design-scroll .design-purpose-row,
+.app.basic-product-app .basic-design-scroll .design-detail-row{
+  flex-wrap:nowrap!important;
+  overflow:visible!important;
+  width:max-content!important;
+  max-width:none!important;
+}
+.app.basic-product-app .basic-design-scroll .font-preset-row button,
+.app.basic-product-app .basic-design-scroll .design-purpose-row button,
+.app.basic-product-app .basic-design-scroll .font-detail-row button,
+.app.basic-product-app .basic-design-scroll .ribbon-select,
+.app.basic-product-app .basic-design-scroll .ribbon-color{
+  flex:0 0 auto!important;
+}
+
+.app.basic-product-app .basic-output-body{
+  padding:14px!important;
+  overflow:visible!important;
+}
+.app.basic-product-app .basic-output-body .v224-page-structure{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:14px!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+.app.basic-product-app .basic-output-body .v224-page-add,
+.app.basic-product-app .basic-output-body .v224-section-settings,
+.app.basic-product-app .basic-output-body .custom-section-editor,
+.app.basic-product-app .basic-output-body .editor-box{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  border:1px solid #dbe7f3!important;
+  border-radius:16px!important;
+  background:#f8fafc!important;
+  padding:14px!important;
+}
+.app.basic-product-app .basic-output-body .v224-section-settings>b{
+  display:block!important;
+  font-size:14px!important;
+  color:#0f172a!important;
+  margin-bottom:3px!important;
+}
+.app.basic-product-app .basic-output-body .v224-section-settings>p{
+  margin:0 0 12px!important;
+  color:#64748b!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+.app.basic-product-app .basic-output-body .label-row{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  align-items:stretch!important;
+  border:1px solid #e2eaf4!important;
+  background:#fff!important;
+  border-radius:14px!important;
+  padding:10px!important;
+  margin-bottom:10px!important;
+  min-width:0!important;
+}
+.app.basic-product-app .basic-output-body .label-row .field,
+.app.basic-product-app .basic-output-body .label-row label.field,
+.app.basic-product-app .basic-output-body .label-row input[type="text"]{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+.app.basic-product-app .basic-output-body .section-controls.page-placement-controls{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  padding:4px 2px 6px!important;
+  white-space:nowrap!important;
+}
+.app.basic-product-app .basic-output-body .section-controls .check,
+.app.basic-product-app .basic-output-body .page-placement-controls .check{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+  min-width:max-content!important;
+  margin:0!important;
+  border:1px solid #dbe4f0!important;
+  background:#fff!important;
+  border-radius:999px!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+.app.basic-product-app .basic-output-body .section-controls .check input{
+  flex:0 0 auto!important;
+  margin:0!important;
+}
+.app.basic-product-app .basic-output-body .placement-buttons{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+.app.basic-product-app .basic-output-body .placement-buttons button{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  min-width:max-content!important;
+  border-radius:999px!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+}
+.app.basic-product-app .basic-output-body .danger-check{
+  color:#be123c!important;
+}
+@media(max-width:760px){
+  .app.basic-product-app .basic-design-scroll .font-quick-controls,
+  .app.basic-product-app .basic-design-scroll .ribbon-design-tools{
+    min-width:560px!important;
+  }
+  .app.basic-product-app .basic-output-body{
+    padding:12px!important;
+  }
+  .app.basic-product-app .basic-output-body .v224-page-add,
+  .app.basic-product-app .basic-output-body .v224-section-settings,
+  .app.basic-product-app .basic-output-body .custom-section-editor,
+  .app.basic-product-app .basic-output-body .editor-box{
+    padding:12px!important;
+  }
+}

@@ -1771,14 +1771,14 @@ function V224PageStructurePanel({type,doc,setDoc}){
   return <div className="v224-page-structure"><div className="v224-page-add"><V26PageManager doc={doc} setDoc={setDoc}/></div><div className="v224-section-settings"><b>섹션 제목 · 페이지 나눔</b><p>오른쪽 미리보기에서 보이는 섹션 이름과 새 페이지 여부를 바로 조정합니다.</p>{labels.map((l,i)=><div className="label-row" key={i}><Field label={`섹션 ${i+1} 제목`} value={doc.labels?.[i]||l} onChange={v=>setDoc({...doc,labels:{...(doc.labels||{}),[i]:v}})} /><div className="section-controls page-placement-controls"><label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 섹션부터 새 페이지</label><div className="placement-buttons"><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>현재 페이지</button><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지</button></div><label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 숨김</label></div></div>)}</div><CustomSectionsEditor doc={doc} setDoc={setDoc}/></div>
 }
 function V238LiteSettings({type,doc,setDoc}){
-  return <section className="v238-lite-settings" data-editor-title="간단 설정">
-    <details className="v238-settings-card">
+  return <section className="v238-lite-settings basic-101-settings" data-editor-title="간단 설정">
+    <details className="v238-settings-card basic-design-settings">
       <summary><b>디자인 설정</b><span>색상 · 글자 크기 · 문서 밀도</span></summary>
-      <div className="v238-settings-body v237-design-grid"><FontQuickControls doc={doc} setDoc={setDoc}/><RibbonStyleTools type={type} doc={doc} setDoc={setDoc}/></div>
+      <div className="v238-settings-body v237-design-grid basic-design-scroll"><FontQuickControls doc={doc} setDoc={setDoc}/><RibbonStyleTools type={type} doc={doc} setDoc={setDoc}/></div>
     </details>
-    <details className="v238-settings-card">
+    <details className="v238-settings-card basic-output-settings">
       <summary><b>출력/페이지 설정</b><span>섹션 제목 · 페이지 나눔 · 추가 페이지</span></summary>
-      <div className="v238-settings-body"><V224PageStructurePanel type={type} doc={doc} setDoc={setDoc}/></div>
+      <div className="v238-settings-body basic-output-body"><V224PageStructurePanel type={type} doc={doc} setDoc={setDoc}/></div>
     </details>
   </section>
 }
