@@ -7,6 +7,145 @@ const PreviewDirectEditContext = React.createContext(false);
 const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
+
+// BASIC 1.0.8 구매자 이메일 인증 설정
+// Vercel 환경변수에 아래 2개를 등록해야 합니다.
+// VITE_SUPABASE_URL=https://xxxxx.supabase.co
+// VITE_SUPABASE_ANON_KEY=Supabase anon public key
+const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
+const SUPABASE_URL=(import.meta.env.VITE_SUPABASE_URL||'').replace(/\/$/,'');
+const SUPABASE_ANON_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY||'';
+const SUPABASE_READY=!!(SUPABASE_URL&&SUPABASE_ANON_KEY);
+function authRedirectUrl(){
+  const {origin,pathname}=window.location;
+  return `${origin}${pathname}`;
+}
+function normalizeEmail(email){return String(email||'').trim().toLowerCase();}
+function readAuthSession(){
+  try{return JSON.parse(localStorage.getItem(AUTH_STORAGE)||'null')}catch{return null}
+}
+function writeAuthSession(session){
+  try{localStorage.setItem(AUTH_STORAGE,JSON.stringify(session||null))}catch{}
+}
+function clearAuthSession(){
+  try{localStorage.removeItem(AUTH_STORAGE)}catch{}
+}
+function parseAuthHash(){
+  const raw=window.location.hash||'';
+  if(!raw.includes('access_token='))return null;
+  const params=new URLSearchParams(raw.replace(/^#/,''));
+  const access_token=params.get('access_token');
+  const refresh_token=params.get('refresh_token');
+  const expires_in=Number(params.get('expires_in')||3600);
+  const token_type=params.get('token_type')||'bearer';
+  if(!access_token)return null;
+  history.replaceState(null,'',window.location.pathname+window.location.search);
+  return {access_token,refresh_token,token_type,expires_at:Date.now()+expires_in*1000};
+}
+async function supabaseFetch(path,{method='GET',token,body,query}={}){
+  if(!SUPABASE_READY)throw new Error('Supabase 환경변수가 설정되지 않았습니다.');
+  const url=new URL(`${SUPABASE_URL}${path}`);
+  if(query){Object.entries(query).forEach(([k,v])=>url.searchParams.set(k,v));}
+  const res=await fetch(url.toString(),{
+    method,
+    headers:{
+      apikey:SUPABASE_ANON_KEY,
+      Authorization:`Bearer ${token||SUPABASE_ANON_KEY}`,
+      'Content-Type':'application/json'
+    },
+    body:body?JSON.stringify(body):undefined
+  });
+  if(!res.ok){
+    let detail='';
+    try{detail=JSON.stringify(await res.json())}catch{detail=await res.text().catch(()=> '')}
+    throw new Error(detail||`Supabase 요청 실패: ${res.status}`);
+  }
+  if(res.status===204)return null;
+  return res.json().catch(()=>null);
+}
+async function requestMagicLink(email){
+  const clean=normalizeEmail(email);
+  if(!clean)throw new Error('이메일을 입력해 주세요.');
+  // Supabase Auth GoTrue REST API: magic link 발송
+  return supabaseFetch('/auth/v1/otp',{method:'POST',query:{redirect_to:authRedirectUrl()},body:{email:clean,create_user:true}});
+}
+async function getAuthUser(session){
+  return supabaseFetch('/auth/v1/user',{token:session?.access_token});
+}
+async function checkAllowedBuyer(email,session){
+  const clean=normalizeEmail(email);
+  const data=await supabaseFetch('/rest/v1/allowed_users',{
+    token:session?.access_token,
+    query:{select:'email,plan,active,church_name,memo',email:`eq.${clean}`,active:'eq.true',limit:'1'}
+  });
+  return Array.isArray(data)&&data.length?data[0]:null;
+}
+function AuthGate({children}){
+  const [status,setStatus]=useState('checking');
+  const [email,setEmail]=useState('');
+  const [buyer,setBuyer]=useState(null);
+  const [message,setMessage]=useState('');
+  const [error,setError]=useState('');
+  const [session,setSession]=useState(null);
+  const [formEmail,setFormEmail]=useState('');
+  useEffect(()=>{
+    let cancelled=false;
+    async function boot(){
+      if(!SUPABASE_READY){setStatus('setup');return;}
+      setStatus('checking');
+      setError('');
+      try{
+        const hashSession=parseAuthHash();
+        const saved=hashSession||readAuthSession();
+        if(!saved?.access_token){setStatus('signedOut');return;}
+        writeAuthSession(saved);
+        const user=await getAuthUser(saved);
+        const userEmail=normalizeEmail(user?.email);
+        if(!userEmail)throw new Error('로그인 이메일을 확인하지 못했습니다.');
+        const allowed=await checkAllowedBuyer(userEmail,saved);
+        if(cancelled)return;
+        setSession(saved);
+        setEmail(userEmail);
+        if(allowed){setBuyer(allowed);setStatus('allowed');}
+        else{setBuyer(null);setStatus('notAllowed');}
+      }catch(e){
+        if(cancelled)return;
+        console.warn('인증 확인 실패',e);
+        clearAuthSession();
+        setSession(null);setEmail('');setBuyer(null);setStatus('signedOut');
+        setError('로그인 확인에 실패했습니다. 다시 로그인해 주세요.');
+      }
+    }
+    boot();
+    return ()=>{cancelled=true};
+  },[]);
+  async function sendLogin(e){
+    e?.preventDefault?.();
+    setError('');setMessage('');
+    const clean=normalizeEmail(formEmail);
+    if(!clean){setError('구매 시 등록한 이메일을 입력해 주세요.');return;}
+    setStatus('sending');
+    try{
+      await requestMagicLink(clean);
+      setStatus('emailSent');
+      setMessage(`${clean} 주소로 로그인 링크를 보냈습니다. 메일함을 확인해 주세요.`);
+    }catch(e){
+      console.error(e);
+      setStatus('signedOut');
+      setError('로그인 링크 발송에 실패했습니다. Supabase 설정과 이메일 주소를 확인해 주세요.');
+    }
+  }
+  function signOut(){
+    clearAuthSession();
+    setSession(null);setBuyer(null);setEmail('');setMessage('');setError('');setStatus('signedOut');
+  }
+  if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
+  if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
+  if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.0 작성기</h1><p>구매 시 등록한 이메일로 로그인해 주세요. 이메일 인증 후 작성기를 사용할 수 있습니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}</div>}<small>작성기 링크가 공유되어도 등록되지 않은 이메일은 사용할 수 없습니다.</small></form></div>;
+  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}</span><button onClick={signOut}>로그아웃</button></div>{children}</>;
+}
+
 const DEPARTMENTS=['선교부','교육부','문화부','예배부','사회봉사부','관리부','재정부','속회','소그룹','청년부','기타'];
 const EDU_DEPTS=['영아부','유치부','초등부','청소년부','청년부'];
 const THEMES={
@@ -2712,7 +2851,7 @@ function quickTabFromPreviewClick(docType,sectionKey,sectionTitle){
   }
   return 'basic';
 }
-function App(){
+function AppShell(){
   const [all,setAll]=useAutosave();
   const [type,setType]=useState('기본 공지 안내문');
   const [view,setView]=useState('fit');
@@ -2962,7 +3101,7 @@ function App(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 1.0 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사 안내·교육부서 주간보고서 3종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3008,5 +3147,7 @@ function App(){
     </main>
   </div>
 }
+
+function App(){return <AuthGate><AppShell/></AuthGate>}
 
 export default App;
