@@ -1,11 +1,11 @@
-import { methodGuard, readJson, sendJson, supabaseRequest } from './_supabase.js';
+import { methodGuard, readJson, sendJson, supabaseRequest, serializeError } from './_supabase.js';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
 export default async function handler(req, res) {
-  if (!methodGuard(req, res)) return;
+  if (!methodGuard(req, res, ['POST'])) return;
   try {
     const body = await readJson(req);
     const accessToken = String(body.access_token || '').trim();
@@ -28,10 +28,14 @@ export default async function handler(req, res) {
     const buyer = Array.isArray(rows) && rows.length ? rows[0] : null;
     return sendJson(res, 200, { buyer, email });
   } catch (error) {
+    const info = serializeError(error);
+    console.error('[check-buyer] failed', JSON.stringify(info, null, 2));
     return sendJson(res, error.status || 500, {
       error: '구매자 권한 확인에 실패했습니다.',
-      detail: error.message || String(error),
+      detail: info.message,
       status: error.status || 500,
+      cause: info.cause,
+      diagnostics: info.diagnostics,
     });
   }
 }
