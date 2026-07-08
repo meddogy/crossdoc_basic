@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.0.8 구매자 이메일 인증 설정
+// BASIC 1.0.9 로그인 안정화판: 구매자 이메일 인증 설정
 // Vercel 환경변수에 아래 2개를 등록해야 합니다.
 // VITE_SUPABASE_URL=https://xxxxx.supabase.co
 // VITE_SUPABASE_ANON_KEY=Supabase anon public key
@@ -16,6 +16,23 @@ const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const SUPABASE_URL=(import.meta.env.VITE_SUPABASE_URL||'').replace(/\/$/,'');
 const SUPABASE_ANON_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY||'';
 const SUPABASE_READY=!!(SUPABASE_URL&&SUPABASE_ANON_KEY);
+const AUTH_DEBUG_INFO={
+  url:SUPABASE_URL||'(비어 있음)',
+  keyType:SUPABASE_ANON_KEY?(/^eyJ/.test(SUPABASE_ANON_KEY)?'Legacy anon public key':'Publishable key / 기타 키'):'(비어 있음)',
+  keyPrefix:SUPABASE_ANON_KEY?`${SUPABASE_ANON_KEY.slice(0,12)}…`:'(비어 있음)'
+};
+function readableSupabaseError(error){
+  const raw=String(error?.message||error||'알 수 없는 오류');
+  let parsed=null;
+  try{parsed=JSON.parse(raw)}catch{}
+  if(parsed){
+    if(Array.isArray(parsed))return parsed.map(x=>x?.message||x?.error_description||x?.msg||JSON.stringify(x)).join(' / ');
+    return parsed.error_description||parsed.msg||parsed.message||parsed.error||JSON.stringify(parsed);
+  }
+  if(/Failed to fetch/i.test(raw))return 'Supabase 주소가 잘못되었거나 네트워크 연결이 차단되었습니다. VITE_SUPABASE_URL 값을 다시 확인해 주세요.';
+  if(/Invalid API key|apikey|JWT|Unauthorized/i.test(raw))return 'Supabase 공개키가 맞지 않습니다. VITE_SUPABASE_ANON_KEY에 Legacy anon public key를 넣었는지 확인해 주세요.';
+  return raw;
+}
 function authRedirectUrl(){
   const {origin,pathname}=window.location;
   return `${origin}${pathname}`;
@@ -58,7 +75,10 @@ async function supabaseFetch(path,{method='GET',token,body,query}={}){
   if(!res.ok){
     let detail='';
     try{detail=JSON.stringify(await res.json())}catch{detail=await res.text().catch(()=> '')}
-    throw new Error(detail||`Supabase 요청 실패: ${res.status}`);
+    const err=new Error(detail||`Supabase 요청 실패: ${res.status}`);
+    err.status=res.status;
+    err.endpoint=path;
+    throw err;
   }
   if(res.status===204)return null;
   return res.json().catch(()=>null);
@@ -66,7 +86,13 @@ async function supabaseFetch(path,{method='GET',token,body,query}={}){
 async function requestMagicLink(email){
   const clean=normalizeEmail(email);
   if(!clean)throw new Error('이메일을 입력해 주세요.');
-  // Supabase Auth GoTrue REST API: magic link 발송
+  if(!SUPABASE_URL||!/https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL)){
+    throw new Error(`VITE_SUPABASE_URL 값이 올바르지 않습니다. 현재 값: ${SUPABASE_URL||'(비어 있음)'}`);
+  }
+  if(!SUPABASE_ANON_KEY){
+    throw new Error('VITE_SUPABASE_ANON_KEY 값이 비어 있습니다.');
+  }
+  // Supabase Auth GoTrue REST API: magic link / OTP 발송
   return supabaseFetch('/auth/v1/otp',{method:'POST',query:{redirect_to:authRedirectUrl()},body:{email:clean,create_user:true}});
 }
 async function getAuthUser(session){
@@ -86,6 +112,7 @@ function AuthGate({children}){
   const [buyer,setBuyer]=useState(null);
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
+  const [errorDetail,setErrorDetail]=useState('');
   const [session,setSession]=useState(null);
   const [formEmail,setFormEmail]=useState('');
   useEffect(()=>{
@@ -114,6 +141,7 @@ function AuthGate({children}){
         clearAuthSession();
         setSession(null);setEmail('');setBuyer(null);setStatus('signedOut');
         setError('로그인 확인에 실패했습니다. 다시 로그인해 주세요.');
+        setErrorDetail(readableSupabaseError(e));
       }
     }
     boot();
@@ -121,7 +149,7 @@ function AuthGate({children}){
   },[]);
   async function sendLogin(e){
     e?.preventDefault?.();
-    setError('');setMessage('');
+    setError('');setErrorDetail('');setMessage('');
     const clean=normalizeEmail(formEmail);
     if(!clean){setError('구매 시 등록한 이메일을 입력해 주세요.');return;}
     setStatus('sending');
@@ -132,17 +160,18 @@ function AuthGate({children}){
     }catch(e){
       console.error(e);
       setStatus('signedOut');
-      setError('로그인 링크 발송에 실패했습니다. Supabase 설정과 이메일 주소를 확인해 주세요.');
+      setError('로그인 링크 발송에 실패했습니다. 아래 상세 오류를 확인해 주세요.');
+      setErrorDetail(readableSupabaseError(e));
     }
   }
   function signOut(){
     clearAuthSession();
-    setSession(null);setBuyer(null);setEmail('');setMessage('');setError('');setStatus('signedOut');
+    setSession(null);setBuyer(null);setEmail('');setMessage('');setError('');setErrorDetail('');setStatus('signedOut');
   }
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.0 작성기</h1><p>구매 시 등록한 이메일로 로그인해 주세요. 이메일 인증 후 작성기를 사용할 수 있습니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}</div>}<small>작성기 링크가 공유되어도 등록되지 않은 이메일은 사용할 수 없습니다.</small></form></div>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.0 작성기</h1><p>구매 시 등록한 이메일로 로그인해 주세요. 이메일 인증 후 작성기를 사용할 수 있습니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>Supabase URL: <code>{AUTH_DEBUG_INFO.url}</code></p><p>Key 종류: <code>{AUTH_DEBUG_INFO.keyType}</code></p><p>Key 앞부분: <code>{AUTH_DEBUG_INFO.keyPrefix}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>작성기 링크가 공유되어도 등록되지 않은 이메일은 사용할 수 없습니다.</small></form></div>;
   return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}</span><button onClick={signOut}>로그아웃</button></div>{children}</>;
 }
 
