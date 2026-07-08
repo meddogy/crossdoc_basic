@@ -11092,3 +11092,73 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
     grid-template-columns:1fr!important;
   }
 }
+
+/* Church Docs Kit BASIC 1.0.3 - 상품용 설정 단순화 */
+.app.basic-product-app .basic-103-simple-settings{
+  margin-top:14px;
+  display:grid;
+  gap:10px;
+}
+.app.basic-product-app .basic-simple-card,
+.app.basic-product-app .basic-advanced-card{
+  border:1px solid #dbe7f3;
+  border-radius:16px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(15,23,42,.045);
+}
+.app.basic-product-app .basic-simple-card summary,
+.app.basic-product-app .basic-advanced-card summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:14px 15px;
+}
+.app.basic-product-app .basic-simple-card summary::-webkit-details-marker,
+.app.basic-product-app .basic-advanced-card summary::-webkit-details-marker{display:none;}
+.app.basic-product-app .basic-simple-card summary b,
+.app.basic-product-app .basic-advanced-card summary b{font-size:14px;color:#0f172a;letter-spacing:-.02em;}
+.app.basic-product-app .basic-simple-card summary span,
+.app.basic-product-app .basic-advanced-card summary span{font-size:12px;color:#64748b;text-align:right;line-height:1.35;}
+.app.basic-product-app .basic-simple-card[open] summary,
+.app.basic-product-app .basic-advanced-card[open] summary{border-bottom:1px solid #e5edf6;background:#f8fbff;}
+.app.basic-product-app .basic-simple-body{padding:14px;display:grid;gap:12px;}
+.app.basic-product-app .basic-control-group{border:1px solid #e2eaf4;background:#f8fafc;border-radius:14px;padding:12px;display:grid;gap:10px;}
+.app.basic-product-app .basic-control-title{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;}
+.app.basic-product-app .basic-control-title b{font-size:13px;color:#0f172a;}
+.app.basic-product-app .basic-control-title span{font-size:11px;color:#64748b;text-align:right;}
+.app.basic-product-app .basic-segment{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.app.basic-product-app .basic-segment button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:12px;padding:9px 8px;font-weight:900;font-size:12px;cursor:pointer;min-width:0;white-space:nowrap;}
+.app.basic-product-app .basic-segment button.active{background:#0f172a;border-color:#0f172a;color:#fff;box-shadow:0 5px 12px rgba(15,23,42,.16);}
+.app.basic-product-app .basic-reset-btn{border:1px solid #bfd6f2;background:#eef6ff;color:#0b2d5c;border-radius:12px;padding:10px 12px;font-weight:900;cursor:pointer;}
+.app.basic-product-app .basic-simple-note{margin:0;color:#64748b;font-size:12px;line-height:1.5;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:10px 12px;}
+.app.basic-product-app .basic-advanced-card{box-shadow:none;background:#fbfdff;border-style:dashed;}
+.app.basic-product-app .basic-advanced-card summary{padding:12px 14px;}
+.app.basic-product-app .basic-advanced-card summary b{font-size:13px;color:#475569;}
+.app.basic-product-app .basic-advanced-card summary span{font-size:11px;color:#94a3b8;}
+.app.basic-product-app .basic-advanced-body{padding:12px;overflow:hidden;}
+.app.basic-product-app .basic-advanced-body .v224-page-structure{display:grid!important;grid-template-columns:1fr!important;gap:12px!important;margin:0!important;max-height:none!important;overflow:visible!important;}
+.app.basic-product-app .basic-advanced-body .v224-page-add,
+.app.basic-product-app .basic-advanced-body .v224-section-settings,
+.app.basic-product-app .basic-advanced-body .custom-section-editor,
+.app.basic-product-app .basic-advanced-body .editor-box{width:100%!important;max-width:100%!important;box-sizing:border-box!important;border:1px solid #e2eaf4!important;border-radius:14px!important;background:#fff!important;padding:12px!important;overflow:hidden!important;}
+.app.basic-product-app .basic-advanced-body .label-row{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;border:1px solid #edf2f7!important;border-radius:12px!important;background:#fbfdff!important;padding:10px!important;margin:8px 0!important;overflow:hidden!important;}
+.app.basic-product-app .basic-advanced-body .section-controls.page-placement-controls{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;overflow:visible!important;padding:0!important;white-space:normal!important;}
+.app.basic-product-app .basic-advanced-body .placement-buttons{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;width:100%!important;}
+.app.basic-product-app .basic-advanced-body .placement-buttons button,
+.app.basic-product-app .basic-advanced-body .check{width:100%!important;max-width:100%!important;min-width:0!important;border-radius:11px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.app.basic-product-app .basic-advanced-body .check{display:flex!important;align-items:center!important;gap:6px!important;border:1px solid #dbe4f0!important;background:#fff!important;padding:9px 10px!important;margin:0!important;line-height:1.2!important;}
+@media(max-width:760px){
+  .app.basic-product-app .basic-103-simple-settings{margin:12px 0 86px;}
+  .app.basic-product-app .basic-simple-card summary,
+  .app.basic-product-app .basic-advanced-card summary{align-items:flex-start;flex-direction:column;gap:4px;}
+  .app.basic-product-app .basic-simple-card summary span,
+  .app.basic-product-app .basic-advanced-card summary span{text-align:left;}
+  .app.basic-product-app .basic-control-title{align-items:flex-start;flex-direction:column;gap:3px;}
+  .app.basic-product-app .basic-control-title span{text-align:left;}
+  .app.basic-product-app .basic-segment{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .app.basic-product-app .basic-advanced-body .placement-buttons{grid-template-columns:1fr!important;}
+}

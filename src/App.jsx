@@ -1770,17 +1770,51 @@ function V224PageStructurePanel({type,doc,setDoc}){
   const labels=labelsFor(type);
   return <div className="v224-page-structure"><div className="v224-page-add"><V26PageManager doc={doc} setDoc={setDoc}/></div><div className="v224-section-settings"><b>섹션 제목 · 페이지 나눔</b><p>오른쪽 미리보기에서 보이는 섹션 이름과 새 페이지 여부를 바로 조정합니다.</p>{labels.map((l,i)=><div className="label-row" key={i}><Field label={`섹션 ${i+1} 제목`} value={doc.labels?.[i]||l} onChange={v=>setDoc({...doc,labels:{...(doc.labels||{}),[i]:v}})} /><div className="section-controls page-placement-controls"><label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 섹션부터 새 페이지</label><div className="placement-buttons"><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>현재 페이지</button><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지</button></div><label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 숨김</label></div></div>)}</div><CustomSectionsEditor doc={doc} setDoc={setDoc}/></div>
 }
-function V238LiteSettings({type,doc,setDoc}){
-  return <section className="v238-lite-settings basic-101-settings" data-editor-title="간단 설정">
-    <details className="v238-settings-card basic-design-settings">
-      <summary><b>디자인 설정</b><span>색상 · 글자 크기 · 문서 밀도</span></summary>
-      <div className="v238-settings-body v237-design-grid basic-design-scroll"><FontQuickControls doc={doc} setDoc={setDoc}/><RibbonStyleTools type={type} doc={doc} setDoc={setDoc}/></div>
+function BasicSimpleSettings({type,doc,setDoc}){
+  const st={...baseExtras(type).style,...(doc?.style||{})};
+  const fs=clampFont(st.fontScale);
+  const preset=type==='각부 월간행사 안내'?'월간 일정형':'행정 보고형';
+  const resetBasic=()=>updateDocStyle(doc,setDoc,{...st,...THEMES['클래식 네이비'],...presetStylePatch(preset),theme:'클래식 네이비',preset,fontScale:100,titleScale:100,bodyScale:100,tableScale:100,listScale:100,autoFit:false,fontTargets:{},activeFontTarget:'',activeFontTargets:[],activeFontLabel:''});
+  const setFont=(value)=>updateDocStyle(doc,setDoc,{...st,fontScale:value,autoFit:false});
+  const setDensity=(mode)=>{
+    if(mode==='roomy') updateDocStyle(doc,setDoc,{...st,fontScale:104,autoFit:false,outputMode:'normal'});
+    if(mode==='normal') updateDocStyle(doc,setDoc,{...st,fontScale:100,autoFit:false,outputMode:'normal'});
+    if(mode==='compact') updateDocStyle(doc,setDoc,{...st,fontScale:96,autoFit:true,outputMode:'fit-one'});
+  };
+  const fontMode=fs<=96?'small':fs>=106?'large':'normal';
+  const densityMode=st.autoFit?'compact':fs>=103?'roomy':'normal';
+  return <section className="basic-103-simple-settings" data-editor-title="간단 설정">
+    <details className="basic-simple-card">
+      <summary><b>간단 설정</b><span>글자 크기와 문서 밀도만 조정합니다.</span></summary>
+      <div className="basic-simple-body">
+        <div className="basic-control-group">
+          <div className="basic-control-title"><b>글자 크기</b><span>문서 전체 글자 크기</span></div>
+          <div className="basic-segment" role="group" aria-label="글자 크기">
+            <button type="button" className={fontMode==='small'?'active':''} onClick={()=>setFont(94)}>작게</button>
+            <button type="button" className={fontMode==='normal'?'active':''} onClick={()=>setFont(100)}>기본</button>
+            <button type="button" className={fontMode==='large'?'active':''} onClick={()=>setFont(108)}>크게</button>
+          </div>
+        </div>
+        <div className="basic-control-group">
+          <div className="basic-control-title"><b>문서 밀도</b><span>A4 안에서 여백과 간격을 조정</span></div>
+          <div className="basic-segment" role="group" aria-label="문서 밀도">
+            <button type="button" className={densityMode==='roomy'?'active':''} onClick={()=>setDensity('roomy')}>여유롭게</button>
+            <button type="button" className={densityMode==='normal'?'active':''} onClick={()=>setDensity('normal')}>기본</button>
+            <button type="button" className={densityMode==='compact'?'active':''} onClick={()=>setDensity('compact')}>압축</button>
+          </div>
+        </div>
+        <button type="button" className="basic-reset-btn" onClick={resetBasic}>기본 네이비 양식으로 되돌리기</button>
+        <p className="basic-simple-note">BASIC에서는 색상과 페이지 나눔을 기본값으로 유지합니다. 내용만 바꿔도 바로 PDF/PNG로 저장할 수 있게 단순화했습니다.</p>
+      </div>
     </details>
-    <details className="v238-settings-card basic-output-settings">
-      <summary><b>출력/페이지 설정</b><span>섹션 제목 · 페이지 나눔 · 추가 페이지</span></summary>
-      <div className="v238-settings-body basic-output-body"><V224PageStructurePanel type={type} doc={doc} setDoc={setDoc}/></div>
+    <details className="basic-advanced-card">
+      <summary><b>고급 페이지 설정 열기</b><span>섹션 제목·페이지 나눔이 꼭 필요할 때만 사용</span></summary>
+      <div className="basic-advanced-body"><V224PageStructurePanel type={type} doc={doc} setDoc={setDoc}/></div>
     </details>
   </section>
+}
+function V238LiteSettings({type,doc,setDoc}){
+  return <BasicSimpleSettings type={type} doc={doc} setDoc={setDoc}/>
 }
 function GenericEditor({type,doc,setDoc,selectedTypes=[],allDocs,setAllDocs}){const inputScopeRef=useRef(null);return <div className="generic-editor-scope v2-generic-scope v26-editor-scope v222-simple-tools-scope v238-editor-scope" ref={inputScopeRef}>
   <V26TopTools type={type} doc={doc} setDoc={setDoc}/>
@@ -2929,8 +2963,8 @@ function App(){
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
   return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
-      <div className="brand"><b>교회문서키트</b><span>BASIC 1.0 작성기</span></div>
-      <div className="select-help"><b>문서 선택</b><span>BASIC 1.0에서는 자주 쓰는 3개 문서를 먼저 안정적으로 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
+      <div className="brand"><b>교회문서키트</b><span>BASIC 1.0.3 작성기</span></div>
+      <div className="select-help"><b>문서 선택</b><span>BASIC 1.0.3에서는 자주 쓰는 3개 문서를 먼저 안정적으로 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
       {CATEGORIES.map(cat=><div className="menu-group" key={cat.name}><h4>{cat.name}</h4>{cat.types.map(t=><DocMenuItem key={t} t={t} type={type} setType={setType} selected={bundleTypes} onToggle={toggleBundle} setSelected={setBundleTypes}/>)}</div>)}
     </aside>
     <main className="editor">
