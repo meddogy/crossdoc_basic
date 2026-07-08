@@ -340,7 +340,7 @@ function CustomSectionsEditor({doc,setDoc}){
   function patch(i,next){setSections(safe.map((x,idx)=>idx===i?{...x,...next}:x))}
   return <div className="custom-section-editor">
     <h4>추가 섹션</h4>
-    <p className="hint">각 문서에 필요한 항목을 더 넣을 수 있습니다. 섹션 제목, 내용, 크기, 새 페이지 시작 여부를 직접 조절할 수 있습니다.</p>
+    <p className="hint">각 문서에 필요한 항목을 더 넣을 수 있습니다. 제목과 내용만 입력하면 되며, 다음 페이지로 넘길 때만 아래 체크를 사용하세요.</p>
     {safe.map((s,i)=><div className="custom-section-row" key={i}>
       <div className="row-head"><b>추가 섹션 {i+1}</b><button onClick={()=>setSections(safe.filter((_,idx)=>idx!==i))}>삭제</button></div>
       <div className="grid2">
@@ -348,7 +348,7 @@ function CustomSectionsEditor({doc,setDoc}){
         <Select label="섹션 크기" value={s.size||'보통'} options={sizeOptions} onChange={v=>patch(i,{size:v})}/>
       </div>
       <Area label="섹션 내용" value={s.body||''} onChange={v=>patch(i,{body:v})}/>
-      <label className="check"><input type="checkbox" checked={!!s.newPage} onChange={e=>patch(i,{newPage:e.target.checked})}/> 이 추가 섹션부터 새 페이지</label>
+      <label className="check"><input type="checkbox" checked={!!s.newPage} onChange={e=>patch(i,{newPage:e.target.checked})}/> 이 추가 내용을 다음 페이지에서 시작하기</label>
     </div>)}
     <div className="custom-add-actions"><button className="btn secondary" onClick={()=>addCustomSection(doc,setDoc)}>+ 섹션 추가</button><PageAddButton doc={doc} setDoc={setDoc} label="+ 페이지 추가"/><PageDeleteButton doc={doc} setDoc={setDoc} label="- 페이지 삭제"/></div>
   </div>
@@ -567,9 +567,9 @@ function TemplatePanel({type,doc,setDoc}){
     if(k==='preset')Object.assign(next,presetStylePatch(v));
     setDoc({...doc,style:next});
   }
-  return <details className="editor-box template-panel" data-editor-title="디자인 · 문구 · 페이지 구성">
-    <summary className="template-summary"><span className="summary-title">⚙️ 디자인 · 문구 · 페이지 구성</span><span className="summary-pill"></span></summary>
-    <p className="template-summary-note">상단 빠른 메뉴에서 자주 쓰는 디자인을 바로 고르고, 여기서는 섹션 제목과 페이지 구성을 세부 조정합니다.</p>
+  return <details className="editor-box template-panel" data-editor-title="디자인 · 문구 · 페이지 조정">
+    <summary className="template-summary"><span className="summary-title">⚙️ 디자인 · 문구 · 페이지 조정</span><span className="summary-pill"></span></summary>
+    <p className="template-summary-note">상단 빠른 메뉴에서 자주 쓰는 디자인을 바로 고르고, 여기서는 필요할 때만 섹션 제목과 페이지 나눔을 조정합니다.</p>
     <h4>문서 목적별 디자인</h4>
     <div className="preset-grid">
       {Object.keys(DESIGN_PRESETS).map(p=><button type="button" key={p} className={'preset-card '+(st.preset===p?'selected':'')} onClick={()=>setStyle('preset',p)}>
@@ -586,17 +586,17 @@ function TemplatePanel({type,doc,setDoc}){
       <Field label="종이 배경" value={st.paper} type="color" onChange={v=>setStyle('paper',v)} />
     </div>
     <p className="hint strong-hint">현재 템플릿: <b>{st.preset}</b> · 선택 즉시 오른쪽 미리보기의 상단/박스/테두리 모양이 바뀝니다.</p>
-    <h4>섹션 제목 · 페이지 나눔</h4>
-    <p className="hint">체크하면 해당 섹션부터 오른쪽 미리보기에서 다음 A4 페이지로 분리됩니다.</p>
+    <h4>페이지 나눔 조정</h4>
+    <p className="hint">보통은 그대로 두셔도 됩니다. PDF 저장 시 내용이 잘리거나 특정 내용을 다음 페이지에서 시작하고 싶을 때만 사용하세요.</p>
     {labels.map((l,i)=><div className="label-row" key={i}>
       <Field label={`섹션 ${i+1} 제목`} value={doc.labels?.[i]||l} onChange={v=>setDoc({...doc,labels:{...(doc.labels||{}),[i]:v}})} />
       <div className="section-controls page-placement-controls">
-        <label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 섹션부터 새 페이지</label>
+        <label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 부분을 다음 페이지에서 시작하기</label>
         <div className="placement-buttons">
-          <button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>이전/현재 페이지로</button>
-          <button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지로</button>
+          <button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>현재 페이지에 두기</button>
+          <button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지로 넘기기</button>
         </div>
-        <label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 이 섹션 숨김</label>
+        <label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 이 항목 사용 안 함</label>
       </div>
     </div>)}
     <CustomSectionsEditor doc={doc} setDoc={setDoc}/>
@@ -1131,7 +1131,7 @@ function QuickWritePanel({type,doc,setDoc}){
   if(!fields.length)return null;
   function patch(path,value){setDoc(setByPath(doc,path,value))}
   return <section className="quick-write-panel" data-editor-title="빠른 작성">
-    <div className="quick-write-head"><div><b>빠른 작성</b><span>자동정리가 어긋나도 이 핵심 칸만 고치면 문서가 바로 완성됩니다. 표·디자인·페이지는 필요할 때만 고급 편집에서 조정합니다.</span></div><em>{type}</em></div>
+    <div className="quick-write-head"><div><b>빠른 작성</b><span>자동정리가 어긋나도 이 핵심 칸만 고치면 문서가 바로 완성됩니다. 표·디자인·페이지는 필요할 때만 세부 편집에서 조정합니다.</span></div><em>{type}</em></div>
     <div className="quick-write-grid">{fields.map(f=>renderQuickField(f,doc,patch))}</div>
   </section>
 }
@@ -1753,7 +1753,7 @@ function V237FormAdjustPanel({type,doc,setDoc}){
   return <div className="v237-form-adjust-panel">
     <div className="v237-adjust-summary"><b>{v237FormatCount(type,doc)}</b><span>반복 항목은 위 페이지별 수정판의 ‘항목 추가’ 버튼과 각 탭 안의 삭제 버튼으로 관리합니다.</span></div>
     <V2QuickAddButtons type={type} doc={doc} setDoc={setDoc}/>
-    {!hasAdjust&&<div className="v237-no-adjust"><b>이 문서는 별도 양식 조정이 많지 않습니다.</b><span>기본 내용은 페이지별 수정판에서 수정하고, 섹션 제목·페이지 나눔은 출력 설정에서 조정해 주세요.</span></div>}
+    {!hasAdjust&&<div className="v237-no-adjust"><b>이 문서는 별도 양식 조정이 많지 않습니다.</b><span>기본 내용은 페이지별 수정판에서 수정하고, 페이지 나눔은 문서가 잘릴 때만 조정해 주세요.</span></div>}
     {hasAdjust&&<div className="v237-adjust-guide"><b>안전하게 조정하기</b><span>빈 화면으로 멈추지 않도록 전체 편집기를 이 안에 다시 불러오지 않고, 반복 항목 추가·삭제와 구조 안내만 제공합니다.</span></div>}
   </div>;
 }
@@ -1768,7 +1768,7 @@ function v222ToolBadges(type,doc){
 }
 function V224PageStructurePanel({type,doc,setDoc}){
   const labels=labelsFor(type);
-  return <div className="v224-page-structure"><div className="v224-page-add"><V26PageManager doc={doc} setDoc={setDoc}/></div><div className="v224-section-settings"><b>섹션 제목 · 페이지 나눔</b><p>오른쪽 미리보기에서 보이는 섹션 이름과 새 페이지 여부를 바로 조정합니다.</p>{labels.map((l,i)=><div className="label-row" key={i}><Field label={`섹션 ${i+1} 제목`} value={doc.labels?.[i]||l} onChange={v=>setDoc({...doc,labels:{...(doc.labels||{}),[i]:v}})} /><div className="section-controls page-placement-controls"><label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 섹션부터 새 페이지</label><div className="placement-buttons"><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>현재 페이지</button><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지</button></div><label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 숨김</label></div></div>)}</div><CustomSectionsEditor doc={doc} setDoc={setDoc}/></div>
+  return <div className="v224-page-structure"><div className="v224-page-add"><V26PageManager doc={doc} setDoc={setDoc}/></div><div className="v224-section-settings"><b>페이지 나눔 조정</b><p>보통은 그대로 두셔도 됩니다. PDF 저장 시 내용이 잘리거나 특정 내용을 다음 페이지에서 시작하고 싶을 때만 조정하세요.</p>{labels.map((l,i)=><div className="label-row" key={i}><Field label={`섹션 ${i+1} 제목`} value={doc.labels?.[i]||l} onChange={v=>setDoc({...doc,labels:{...(doc.labels||{}),[i]:v}})} /><div className="section-controls page-placement-controls"><label className="check"><input type="checkbox" checked={!!doc.breaks?.[i]} onChange={e=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:e.target.checked}})} /> 이 부분을 다음 페이지에서 시작하기</label><div className="placement-buttons"><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:false}})}>현재 페이지에 두기</button><button type="button" onClick={()=>setDoc({...doc,breaks:{...(doc.breaks||{}),[i]:true}})}>다음 페이지로 넘기기</button></div><label className="check danger-check"><input type="checkbox" checked={!!doc.hiddenSections?.[i]} onChange={e=>setDoc({...doc,hiddenSections:{...(doc.hiddenSections||{}),[i]:e.target.checked}})} /> 이 항목 사용 안 함</label></div></div>)}</div><CustomSectionsEditor doc={doc} setDoc={setDoc}/></div>
 }
 function BasicSimpleSettings({type,doc,setDoc}){
   const st={...baseExtras(type).style,...(doc?.style||{})};
@@ -1810,7 +1810,7 @@ function BasicSimpleSettings({type,doc,setDoc}){
       </div>
     </details>
     <details className="basic-advanced-card">
-      <summary><b>고급 페이지 설정</b><span>섹션 제목·페이지 나눔이 꼭 필요할 때만 열기</span></summary>
+      <summary><b>문서가 잘릴 때만 사용</b><span>대부분은 열지 않아도 됩니다</span></summary>
       <div className="basic-advanced-body"><V224PageStructurePanel type={type} doc={doc} setDoc={setDoc}/></div>
     </details>
   </section>
@@ -1822,7 +1822,7 @@ function GenericEditor({type,doc,setDoc,selectedTypes=[],allDocs,setAllDocs}){co
   <V26TopTools type={type} doc={doc} setDoc={setDoc}/>
   <V2FillBoard type={type} doc={doc} setDoc={setDoc}/>
   <V238LiteSettings type={type} doc={doc} setDoc={setDoc}/>
-  <div className="easy-detail-note v238-detail-note">기본 작성은 위 페이지별 수정판에서 끝내고, 디자인이나 페이지 설정이 필요할 때만 아래 설정을 여세요.</div>
+  <div className="easy-detail-note v238-detail-note">기본 작성은 위 페이지별 수정판에서 끝내고, 문서가 잘리거나 여백을 조정해야 할 때만 아래 설정을 여세요.</div>
 </div>}
 function QuickGuide(){return <div className="quick-guide"><b>10분 작성 순서</b><span>1 문서 선택</span><span>2 내용 입력</span><span>3 미리보기 확인</span><span>4 PDF/PNG 저장</span></div>}
 function MobileNotice(){return <div className="mobile-notice"><b>모바일 안내</b><span>모바일에서는 문서 선택을 먼저 하고, 내용 입력 후 미리보기를 확인해 주세요. 표가 많은 문서는 PC·태블릿 편집을 권장합니다.</span></div>}
@@ -1876,7 +1876,7 @@ function FirstUsePanel({type,setType,setSelected,easyMode,setEasyMode,onPDF,onPN
   return <section className="beginner-panel" aria-label="처음 사용 안내">
     <div className="beginner-head">
       <div><span className="beginner-kicker">처음 사용 안내</span><h3>오늘 필요한 문서를 골라주세요</h3><p>반복되는 교회 문서 작성, 이제 10분 안에 끝낼 수 있습니다. 자주 쓰는 3개 문서를 고르고 내용만 채우면 A4/PDF/PNG로 바로 정리됩니다.</p></div>
-      <div className="beginner-mode-toggle"><span>{easyMode?'간편 보기':'고급 편집 보기'}</span><button type="button" onClick={()=>setEasyMode(!easyMode)}>{easyMode?'고급 편집 켜기':'간편 보기로'}</button></div>
+      <div className="beginner-mode-toggle"><span>{easyMode?'간편 보기':'세부 편집 보기'}</span><button type="button" onClick={()=>setEasyMode(!easyMode)}>{easyMode?'세부 편집 켜기':'간편 보기로'}</button></div>
     </div>
     <div className="simple-principle-strip"><span><b>1</b> 문서 선택</span><span><b>2</b> 내용 입력</span><span><b>3</b> 미리보기 확인</span><span><b>4</b> PDF/PNG 저장</span></div>
     <div className="beginner-doc-cards">{cards.map(c=><button type="button" key={c.doc} className={type===c.doc?'active':''} onClick={()=>choose(c.doc)}><b>{c.label}</b><span>{c.desc}</span></button>)}</div>
@@ -2562,7 +2562,7 @@ function DocumentRibbon({type,doc,setDoc,view,setView,busy,onPDF,onPNG,onSave,on
     </div>
     <div className={'ribbon-panel ribbon-panel-'+tab.replace('·','-')}>
       {tab==='홈'&&<div className="ribbon-home-grid"><div className="ribbon-group"><em>바로 작업</em><button type="button" onClick={()=>jump('.edit-drawer',true)}>전체 입력</button><button type="button" onClick={()=>jump('.preview-pane')}>미리보기</button><button type="button" onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게 보기':'한눈 보기'}</button></div><div className="ribbon-group"><em>자주 쓰는 저장</em><button type="button" onClick={onSave}>저장</button><button type="button" disabled={!!busy} onClick={onPDF}>PDF</button><button type="button" disabled={!!busy} onClick={onPNG}>PNG</button></div><div className="ribbon-group"><em>빠른 글자</em><FontQuickControls doc={doc} setDoc={setDoc} compact/></div><div className="ribbon-group"><em>추천 디자인</em><RibbonStyleTools type={type} doc={doc} setDoc={setDoc} compact/></div></div>}
-      {tab==='문서'&&<div className="ribbon-group wide"><em>문서 관리</em><button type="button" onClick={()=>jump('.sidebar')}>문서 선택</button><button type="button" onClick={onSave}>저장하기</button><button type="button" onClick={onBackup}>자료 내보내기</button>{onImport&&<label className="file-btn ribbon-file-btn">자료 가져오기<input type="file" accept=".json" onChange={onImport}/></label>}<button type="button" onClick={onShare}>공유 링크</button><button type="button" onClick={onSample}>샘플 불러오기</button><button type="button" onClick={onBlank}>빈 양식으로 시작</button>{savedAt&&<small>{savedAt}</small>}</div>}
+      {tab==='문서'&&<div className="ribbon-group wide"><em>문서 관리</em><button type="button" onClick={()=>jump('.sidebar')}>문서 선택</button><button type="button" onClick={onSave}>저장하기</button><button type="button" onClick={onBackup}>자료 내보내기</button>{onImport&&<label className="file-btn ribbon-file-btn">자료 가져오기<input type="file" accept=".json" onChange={onImport}/></label>}<button type="button" onClick={onShare}>공유 링크</button><button type="button" onClick={onSample}>샘플 초기화</button><button type="button" onClick={onBlank}>빈 양식으로 시작</button>{savedAt&&<small>{savedAt}</small>}</div>}
       {tab==='입력'&&<div className="ribbon-group wide"><em>입력 이동</em><button type="button" onClick={()=>jump('.edit-drawer',true)}>전체 입력 열기</button><button type="button" onClick={()=>jump('[data-editor-title="기본 정보"]',true)}>기본 정보</button><button type="button" onClick={()=>jump('[data-editor-title*="일정"]',true)}>일정 입력</button><button type="button" onClick={()=>jump('[data-editor-title*="예산"]',true)}>예산 입력</button><button type="button" onClick={()=>jump('.v226-work-tools-panel',true)}>출력 설정</button><button type="button" onClick={()=>jump('.preview-pane')}>미리보기</button></div>}
       {tab==='글자'&&<div className="ribbon-group ribbon-font-group wide"><em>글자 크기</em><FontQuickControls doc={doc} setDoc={setDoc}/></div>}
       {tab==='디자인'&&<div className="ribbon-group ribbon-design-group wide"><em>디자인 선택</em><RibbonStyleTools type={type} doc={doc} setDoc={setDoc}/></div>}
@@ -2952,7 +2952,7 @@ function App(){
     if(drawer)drawer.open=true;
     v211LockPreviewScroll(scrollState);
   }
-  function resetDoc(){if(confirm('이 문서의 내용을 대표 샘플로 초기화할까요?'))setDoc(withBase(type,initialData(type)))}
+  function resetDoc(){if(confirm('현재 작성 중인 내용을 대표 샘플로 다시 채울까요?\n작성 중인 내용은 샘플 내용으로 바뀝니다.'))setDoc(withBase(type,initialData(type)))}
   function startBlank(){if(confirm('예시 문구를 비우고 빈 양식으로 시작할까요?'))setDoc(blankDocFor(type))}
   function saveNow(){if(!saveToStorage(all)){setSavedAt('저장 실패 · 자료 내보내기를 이용해 주세요');return}const t=new Date();setSavedAt(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} 저장됨`)}
   function exportData(){const url=URL.createObjectURL(new Blob([JSON.stringify(all,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='church-docs-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);setSavedAt('백업 파일을 저장했습니다')}
@@ -2976,9 +2976,10 @@ function App(){
           {easyMode? <>
             <button onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게보기':'한눈보기'}</button>
             <button className="save-btn" onClick={saveNow}>저장하기</button>
+            <button type="button" className="sample-reset-btn" onClick={resetDoc}>샘플 초기화</button>
             <button className="strong-export" disabled={!!busy} onClick={()=>runExport('PDF')}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button>
             <button disabled={!!busy} onClick={()=>runExport('PNG')}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button>
-            <button type="button" className="advanced-toggle-top" onClick={()=>setEasyMode(false)}>고급 편집</button>
+            <button type="button" className="advanced-toggle-top" onClick={()=>setEasyMode(false)}>세부 편집</button>
             {savedAt&&<span className="save-status">{savedAt}</span>}
           </> : <>
             <button onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게보기':'한눈보기'}</button>
@@ -2987,7 +2988,7 @@ function App(){
             <label className="export-name-field"><span>저장 파일명</span><input value={fileName} onChange={e=>setFileName(e.target.value)} placeholder={exportName}/></label>
             <button disabled={!!busy} onClick={()=>runExport('PDF')}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button>
             <button disabled={!!busy} onClick={()=>runExport('PNG')}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button>
-            <details className="more-actions"><summary>더보기</summary><div><button onClick={shareCurrent}>공유 링크</button><button onClick={exportData}>자료 내보내기</button><label className="file-btn">가져오기<input type="file" accept=".json" onChange={importData}/></label><button onClick={resetDoc}>샘플 불러오기</button><button onClick={startBlank}>빈 양식으로 시작</button></div></details>
+            <details className="more-actions"><summary>더보기</summary><div><button onClick={shareCurrent}>공유 링크</button><button onClick={exportData}>자료 내보내기</button><label className="file-btn">가져오기<input type="file" accept=".json" onChange={importData}/></label><button onClick={resetDoc}>샘플 초기화</button><button onClick={startBlank}>빈 양식으로 시작</button></div></details>
           </>}
         </div>
       </div>
@@ -3000,7 +3001,7 @@ function App(){
       <div className="workspace preview-first-workspace">
         <section className="form-pane compact-form-pane"><details className="edit-drawer v22-controller-drawer" open><summary><b>문서 편집판</b><span>미리보기에서 선택한 페이지·섹션·표를 수정합니다.</span></summary><GenericEditor type={type} doc={doc} setDoc={setDoc} selectedTypes={bundleTypes} allDocs={all} setAllDocs={setAll}/></details></section>
         <section className="preview-pane">
-          <div className="preview-head"><div><b>완성 미리보기</b><small>{shownTypes.length>1?`${shownTypes.length}개 문서가 하나의 자료로 묶여 보입니다.`:(easyMode?'미리보기 글자를 바로 수정할 수 있습니다. 빈 여백을 클릭하면 오른쪽 편집판으로 이동합니다.':'고급 편집 모드에서는 미리보기 글자도 직접 수정할 수 있습니다.')}</small></div><div className="preview-head-actions"><button type="button" className="preview-reset-btn" onClick={()=>previewRef.current?.scrollTo?.({top:0,left:0,behavior:'smooth'})}>맨 위로</button><PageAddButton doc={doc} setDoc={setDoc} label="+ 페이지 추가"/><PageDeleteButton doc={doc} setDoc={setDoc} label="- 페이지 삭제"/><span>{view==='fit'?'A4 전체 한눈보기':'A4 실제 비율 크게보기'}</span></div></div>
+          <div className="preview-head"><div><b>완성 미리보기</b><small>{shownTypes.length>1?`${shownTypes.length}개 문서가 하나의 자료로 묶여 보입니다.`:(easyMode?'미리보기 글자를 바로 수정할 수 있습니다. 빈 여백을 클릭하면 오른쪽 편집판으로 이동합니다.':'세부 편집 모드에서는 미리보기 글자도 직접 수정할 수 있습니다.')}</small></div><div className="preview-head-actions"><button type="button" className="preview-reset-btn" onClick={()=>previewRef.current?.scrollTo?.({top:0,left:0,behavior:'smooth'})}>맨 위로</button><PageAddButton doc={doc} setDoc={setDoc} label="+ 페이지 추가"/><PageDeleteButton doc={doc} setDoc={setDoc} label="- 페이지 삭제"/><span>{view==='fit'?'A4 전체 한눈보기':'A4 실제 비율 크게보기'}</span></div></div>
           <div className={'preview-wrap '+view} ref={previewRef} onBlurCapture={handlePreviewBlur} onBeforeInputCapture={handlePreviewBeforeInput} onFocusCapture={handlePreviewFocus} onKeyDownCapture={handlePreviewEditKeyDown} onClickCapture={handlePreviewJump} onMouseDownCapture={easyMode?undefined:handlePreviewFontDragStart} onMouseUpCapture={easyMode?undefined:handlePreviewRangeFontSelect}><PreviewDirectEditContext.Provider value={true}><SelectedDocsPreview types={shownTypes} all={all} currentType={type}/></PreviewDirectEditContext.Provider></div>
         </section>
       </div>
