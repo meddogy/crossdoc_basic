@@ -1131,7 +1131,7 @@ function QuickWritePanel({type,doc,setDoc}){
   if(!fields.length)return null;
   function patch(path,value){setDoc(setByPath(doc,path,value))}
   return <section className="quick-write-panel" data-editor-title="빠른 작성">
-    <div className="quick-write-head"><div><b>빠른 작성</b><span>자동정리가 어긋나도 이 핵심 칸만 고치면 문서가 바로 완성됩니다. 표·디자인·페이지는 필요할 때만 세부 편집에서 조정합니다.</span></div><em>{type}</em></div>
+    <div className="quick-write-head"><div><b>빠른 작성</b><span>자동정리가 어긋나도 이 핵심 칸만 고치면 문서가 바로 완성됩니다. 표·디자인·페이지는 필요할 때만 ‘더 자세히 수정하기’에서 조정합니다.</span></div><em>{type}</em></div>
     <div className="quick-write-grid">{fields.map(f=>renderQuickField(f,doc,patch))}</div>
   </section>
 }
@@ -1876,7 +1876,7 @@ function FirstUsePanel({type,setType,setSelected,easyMode,setEasyMode,onPDF,onPN
   return <section className="beginner-panel" aria-label="처음 사용 안내">
     <div className="beginner-head">
       <div><span className="beginner-kicker">처음 사용 안내</span><h3>오늘 필요한 문서를 골라주세요</h3><p>반복되는 교회 문서 작성, 이제 10분 안에 끝낼 수 있습니다. 자주 쓰는 3개 문서를 고르고 내용만 채우면 A4/PDF/PNG로 바로 정리됩니다.</p></div>
-      <div className="beginner-mode-toggle"><span>{easyMode?'간편 보기':'세부 편집 보기'}</span><button type="button" onClick={()=>setEasyMode(!easyMode)}>{easyMode?'세부 편집 켜기':'간편 보기로'}</button></div>
+      <div className="beginner-mode-toggle"><span>{easyMode?'간편 보기':'더 자세히 수정 보기'}</span><button type="button" onClick={()=>setEasyMode(!easyMode)}>{easyMode?'더 자세히 수정하기':'간편 보기로'}</button></div>
     </div>
     <div className="simple-principle-strip"><span><b>1</b> 문서 선택</span><span><b>2</b> 내용 입력</span><span><b>3</b> 미리보기 확인</span><span><b>4</b> PDF/PNG 저장</span></div>
     <div className="beginner-doc-cards">{cards.map(c=><button type="button" key={c.doc} className={type===c.doc?'active':''} onClick={()=>choose(c.doc)}><b>{c.label}</b><span>{c.desc}</span></button>)}</div>
@@ -1932,7 +1932,7 @@ function MobileQuickEdit({type,doc,setDoc,setStage,mobileSimple,setMobileSimple}
   }
   if(!tab)return null;
   const meta=mobileQuickMeta(type,tab);
-  const fieldContent=tab.kind==='fields'?<V23Fields fields={(tab.fields||[]).slice(0,6)} doc={doc} onPatch={patch}/>:<div className="mobile-mini-auto-card"><b>{tab.title||tab.label}</b><span>{tab.desc||'이 항목은 세부 편집에서 더 자세히 조정할 수 있습니다.'}</span><button type="button" onClick={()=>{setMobileSimple?.(false);setTimeout(()=>scrollToMobileTarget('.edit-drawer',true),70)}}>전체 편집 열기</button></div>;
+  const fieldContent=tab.kind==='fields'?<V23Fields fields={(tab.fields||[]).slice(0,6)} doc={doc} onPatch={patch}/>:<div className="mobile-mini-auto-card"><b>{tab.title||tab.label}</b><span>{tab.desc||'이 항목은 ‘더 자세히 수정하기’에서 조정할 수 있습니다.'}</span><button type="button" onClick={()=>{setMobileSimple?.(false);setTimeout(()=>scrollToMobileTarget('.edit-drawer',true),70)}}>전체 편집 열기</button></div>;
   return <div className="mobile-quick-edit v24-mobile-lite-panel v236-quick-write">
     <div className="mobile-lite-head v236-mobile-lite-head"><div><em>빠른 작성</em><b>수정할 항목을 선택하세요</b><span>휴대폰에서는 자주 쓰는 칸만 먼저 수정합니다. 세부 구조는 아래 전체 편집에서 열 수 있습니다.</span></div><button type="button" onClick={jumpPreview}>미리보기</button></div>
     <div className="mobile-lite-tabs v236-choice-cards">{compactTabs.map(t=>{const m=mobileQuickMeta(type,t);return <button type="button" key={t.id} className={t.id===tab.id?'active':''} onClick={()=>setActive(t.id)}><strong>{t.id===tab.id?'✓ ':''}{m.title}</strong><small>{m.desc}</small></button>})}</div>
@@ -2562,7 +2562,7 @@ function DocumentRibbon({type,doc,setDoc,view,setView,busy,onPDF,onPNG,onSave,on
     </div>
     <div className={'ribbon-panel ribbon-panel-'+tab.replace('·','-')}>
       {tab==='홈'&&<div className="ribbon-home-grid"><div className="ribbon-group"><em>바로 작업</em><button type="button" onClick={()=>jump('.edit-drawer',true)}>전체 입력</button><button type="button" onClick={()=>jump('.preview-pane')}>미리보기</button><button type="button" onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게 보기':'한눈 보기'}</button></div><div className="ribbon-group"><em>자주 쓰는 저장</em><button type="button" onClick={onSave}>저장</button><button type="button" disabled={!!busy} onClick={onPDF}>PDF</button><button type="button" disabled={!!busy} onClick={onPNG}>PNG</button></div><div className="ribbon-group"><em>빠른 글자</em><FontQuickControls doc={doc} setDoc={setDoc} compact/></div><div className="ribbon-group"><em>추천 디자인</em><RibbonStyleTools type={type} doc={doc} setDoc={setDoc} compact/></div></div>}
-      {tab==='문서'&&<div className="ribbon-group wide"><em>문서 관리</em><button type="button" onClick={()=>jump('.sidebar')}>문서 선택</button><button type="button" onClick={onSave}>저장하기</button><button type="button" onClick={onBackup}>자료 내보내기</button>{onImport&&<label className="file-btn ribbon-file-btn">자료 가져오기<input type="file" accept=".json" onChange={onImport}/></label>}<button type="button" onClick={onShare}>공유 링크</button><button type="button" onClick={onSample}>샘플 초기화</button><button type="button" onClick={onBlank}>빈 양식으로 시작</button>{savedAt&&<small>{savedAt}</small>}</div>}
+      {tab==='문서'&&<div className="ribbon-group wide"><em>문서 관리</em><button type="button" onClick={()=>jump('.sidebar')}>문서 선택</button><button type="button" onClick={onSave}>저장하기</button><button type="button" onClick={onBackup}>자료 내보내기</button>{onImport&&<label className="file-btn ribbon-file-btn">자료 가져오기<input type="file" accept=".json" onChange={onImport}/></label>}<button type="button" onClick={onShare}>공유 링크</button><button type="button" onClick={onSample}>대표 샘플로 되돌리기</button><button type="button" onClick={onBlank}>빈 양식으로 시작</button>{savedAt&&<small>{savedAt}</small>}</div>}
       {tab==='입력'&&<div className="ribbon-group wide"><em>입력 이동</em><button type="button" onClick={()=>jump('.edit-drawer',true)}>전체 입력 열기</button><button type="button" onClick={()=>jump('[data-editor-title="기본 정보"]',true)}>기본 정보</button><button type="button" onClick={()=>jump('[data-editor-title*="일정"]',true)}>일정 입력</button><button type="button" onClick={()=>jump('[data-editor-title*="예산"]',true)}>예산 입력</button><button type="button" onClick={()=>jump('.v226-work-tools-panel',true)}>출력 설정</button><button type="button" onClick={()=>jump('.preview-pane')}>미리보기</button></div>}
       {tab==='글자'&&<div className="ribbon-group ribbon-font-group wide"><em>글자 크기</em><FontQuickControls doc={doc} setDoc={setDoc}/></div>}
       {tab==='디자인'&&<div className="ribbon-group ribbon-design-group wide"><em>디자인 선택</em><RibbonStyleTools type={type} doc={doc} setDoc={setDoc}/></div>}
@@ -2952,8 +2952,8 @@ function App(){
     if(drawer)drawer.open=true;
     v211LockPreviewScroll(scrollState);
   }
-  function resetDoc(){if(confirm('현재 작성 중인 내용을 대표 샘플로 다시 채울까요?\n작성 중인 내용은 샘플 내용으로 바뀝니다.'))setDoc(withBase(type,initialData(type)))}
-  function startBlank(){if(confirm('예시 문구를 비우고 빈 양식으로 시작할까요?'))setDoc(blankDocFor(type))}
+  function resetDoc(){if(confirm('현재 작성 중인 내용이 대표 샘플 내용으로 바뀝니다.\n계속하시겠습니까?'))setDoc(withBase(type,initialData(type)))}
+  function startBlank(){if(confirm('현재 작성 중인 내용이 비워집니다.\n빈 양식으로 다시 시작하시겠습니까?'))setDoc(blankDocFor(type))}
   function saveNow(){if(!saveToStorage(all)){setSavedAt('저장 실패 · 자료 내보내기를 이용해 주세요');return}const t=new Date();setSavedAt(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} 저장됨`)}
   function exportData(){const url=URL.createObjectURL(new Blob([JSON.stringify(all,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='church-docs-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);setSavedAt('백업 파일을 저장했습니다')}
   async function shareCurrent(){try{const url=`${location.origin}${location.pathname}?share=${encodeSharePayload({type,doc})}`;if(url.length>60000)throw new Error('링크가 너무 깁니다.');if(!navigator.clipboard?.writeText)throw new Error('클립보드를 사용할 수 없습니다.');await navigator.clipboard.writeText(url);setSavedAt('공유 링크가 복사되었습니다')}catch{setSavedAt('공유 링크 실패 · 자료 내보내기를 이용해 주세요')}}
@@ -2976,10 +2976,10 @@ function App(){
           {easyMode? <>
             <button onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게보기':'한눈보기'}</button>
             <button className="save-btn" onClick={saveNow}>저장하기</button>
-            <button type="button" className="sample-reset-btn" onClick={resetDoc}>샘플 초기화</button>
+            <button type="button" className="sample-reset-btn" onClick={resetDoc}>대표 샘플로 되돌리기</button>
             <button className="strong-export" disabled={!!busy} onClick={()=>runExport('PDF')}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button>
             <button disabled={!!busy} onClick={()=>runExport('PNG')}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button>
-            <button type="button" className="advanced-toggle-top" onClick={()=>setEasyMode(false)}>세부 편집</button>
+            <button type="button" className="advanced-toggle-top" onClick={()=>setEasyMode(false)}>더 자세히 수정하기</button>
             {savedAt&&<span className="save-status">{savedAt}</span>}
           </> : <>
             <button onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게보기':'한눈보기'}</button>
@@ -2988,7 +2988,7 @@ function App(){
             <label className="export-name-field"><span>저장 파일명</span><input value={fileName} onChange={e=>setFileName(e.target.value)} placeholder={exportName}/></label>
             <button disabled={!!busy} onClick={()=>runExport('PDF')}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button>
             <button disabled={!!busy} onClick={()=>runExport('PNG')}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button>
-            <details className="more-actions"><summary>더보기</summary><div><button onClick={shareCurrent}>공유 링크</button><button onClick={exportData}>자료 내보내기</button><label className="file-btn">가져오기<input type="file" accept=".json" onChange={importData}/></label><button onClick={resetDoc}>샘플 초기화</button><button onClick={startBlank}>빈 양식으로 시작</button></div></details>
+            <details className="more-actions"><summary>더보기</summary><div><button onClick={shareCurrent}>공유 링크</button><button onClick={exportData}>자료 내보내기</button><label className="file-btn">가져오기<input type="file" accept=".json" onChange={importData}/></label><button onClick={resetDoc}>대표 샘플로 되돌리기</button><button onClick={startBlank}>빈 양식으로 시작</button></div></details>
           </>}
         </div>
       </div>
@@ -3001,7 +3001,7 @@ function App(){
       <div className="workspace preview-first-workspace">
         <section className="form-pane compact-form-pane"><details className="edit-drawer v22-controller-drawer" open><summary><b>문서 편집판</b><span>미리보기에서 선택한 페이지·섹션·표를 수정합니다.</span></summary><GenericEditor type={type} doc={doc} setDoc={setDoc} selectedTypes={bundleTypes} allDocs={all} setAllDocs={setAll}/></details></section>
         <section className="preview-pane">
-          <div className="preview-head"><div><b>완성 미리보기</b><small>{shownTypes.length>1?`${shownTypes.length}개 문서가 하나의 자료로 묶여 보입니다.`:(easyMode?'미리보기 글자를 바로 수정할 수 있습니다. 빈 여백을 클릭하면 오른쪽 편집판으로 이동합니다.':'세부 편집 모드에서는 미리보기 글자도 직접 수정할 수 있습니다.')}</small></div><div className="preview-head-actions"><button type="button" className="preview-reset-btn" onClick={()=>previewRef.current?.scrollTo?.({top:0,left:0,behavior:'smooth'})}>맨 위로</button><PageAddButton doc={doc} setDoc={setDoc} label="+ 페이지 추가"/><PageDeleteButton doc={doc} setDoc={setDoc} label="- 페이지 삭제"/><span>{view==='fit'?'A4 전체 한눈보기':'A4 실제 비율 크게보기'}</span></div></div>
+          <div className="preview-head"><div><b>완성 미리보기</b><small>{shownTypes.length>1?`${shownTypes.length}개 문서가 하나의 자료로 묶여 보입니다.`:(easyMode?'미리보기 글자를 바로 수정할 수 있습니다. 빈 여백을 클릭하면 오른쪽 편집판으로 이동합니다.':'더 자세히 수정하는 화면에서는 미리보기 글자도 직접 수정할 수 있습니다.')}</small></div><div className="preview-head-actions"><button type="button" className="preview-reset-btn" onClick={()=>previewRef.current?.scrollTo?.({top:0,left:0,behavior:'smooth'})}>맨 위로</button><PageAddButton doc={doc} setDoc={setDoc} label="+ 페이지 추가"/><PageDeleteButton doc={doc} setDoc={setDoc} label="- 페이지 삭제"/><span>{view==='fit'?'A4 전체 한눈보기':'A4 실제 비율 크게보기'}</span></div></div>
           <div className={'preview-wrap '+view} ref={previewRef} onBlurCapture={handlePreviewBlur} onBeforeInputCapture={handlePreviewBeforeInput} onFocusCapture={handlePreviewFocus} onKeyDownCapture={handlePreviewEditKeyDown} onClickCapture={handlePreviewJump} onMouseDownCapture={easyMode?undefined:handlePreviewFontDragStart} onMouseUpCapture={easyMode?undefined:handlePreviewRangeFontSelect}><PreviewDirectEditContext.Provider value={true}><SelectedDocsPreview types={shownTypes} all={all} currentType={type}/></PreviewDirectEditContext.Provider></div>
         </section>
       </div>
