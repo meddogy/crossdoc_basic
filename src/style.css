@@ -11162,3 +11162,69 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .app.basic-product-app .basic-segment{grid-template-columns:repeat(3,minmax(0,1fr));}
   .app.basic-product-app .basic-advanced-body .placement-buttons{grid-template-columns:1fr!important;}
 }
+
+/* Church Docs Kit BASIC 1.0.7 - 3개 핵심 문서 디자인 결 통일 */
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin{
+  background:#fff!important;
+  border:0!important;
+  border-top:12px solid var(--primary)!important;
+  border-radius:0!important;
+  box-shadow:0 10px 26px rgba(15,23,42,.12)!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .doc-header{
+  background:transparent!important;
+  border:0!important;
+  border-bottom:1px solid #cbd5e1!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:0 0 14px!important;
+  margin-bottom:10px!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .logo-mark{
+  display:none!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .header-line{
+  display:none!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .doc-section{
+  background:#fff!important;
+  border:0!important;
+  border-bottom:1px solid #e2e8f0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:8px 0 12px!important;
+  margin:0!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .doc-section h2 span{
+  background:#fff!important;
+  color:var(--primary)!important;
+  border:1px solid var(--primary)!important;
+  border-radius:999px!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .month-event{
+  border:1px solid #dbe3ee!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .month-event .num{
+  background:var(--primary)!important;
+  color:#fff!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .month-event .date{
+  background:var(--soft)!important;
+  color:var(--primary)!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .monthly-ref-table{
+  border:1px solid #dbe3ee!important;
+  border-radius:8px!important;
+  overflow:hidden!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .monthly-grid-sections{
+  gap:10px!important;
+}
+.app.basic-product-app.v-basic-1-0-7-unified-design .page.monthly-fixed.style-admin .monthly-bottom{
+  border-top:2px solid var(--primary)!important;
+  background:#fff!important;
+  color:var(--primary)!important;
+}
