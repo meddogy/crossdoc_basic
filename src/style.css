@@ -11850,3 +11850,188 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   }
   .v-basic-1-12-usability-final .budget-collapsible-card>summary span{display:none!important;}
 }
+
+/* BASIC 1.13 사용성 최종 보강판
+   - 계정/바로가기 안내가 저장 버튼과 상단 메뉴를 가리지 않도록 하단 플로팅으로 이동
+   - 부서/팀명은 엔터 없이 즉시 반영
+   - 일정표는 항목이 많아져도 A4 안에 자동 압축
+   - 예산 항목 접기/열기 표시를 텍스트로 명확화
+   - 간단 설정 글씨 크기가 표 내부 글씨에도 확실히 적용되도록 최종 보정 */
+.v-basic-1-13-final-polish.auth-user-bar,
+.auth-user-bar{ }
+.v-basic-1-13-final-polish ~ .auth-user-bar{ }
+.auth-user-bar{
+  top:auto!important;
+  bottom:16px!important;
+  right:18px!important;
+  z-index:850!important;
+  max-width:min(760px,calc(100vw - 36px))!important;
+  border-radius:18px!important;
+  padding:8px 10px!important;
+  box-shadow:0 12px 28px rgba(15,23,42,.16)!important;
+}
+.auth-user-bar span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
+.auth-user-bar em{display:none!important;}
+.pwa-banner{
+  top:auto!important;
+  left:18px!important;
+  right:auto!important;
+  bottom:16px!important;
+  width:min(430px,calc(100vw - 820px))!important;
+  min-width:320px!important;
+  z-index:840!important;
+  padding:11px 13px!important;
+  border-radius:16px!important;
+}
+.pwa-banner b{font-size:13px!important;margin-bottom:2px!important;}
+.pwa-banner p,.pwa-banner details{font-size:11.5px!important;}
+.pwa-banner .shortcut-url{display:none!important;}
+@media(max-width:1180px){
+  .pwa-banner{display:none!important;}
+}
+@media(max-width:720px){
+  .auth-user-bar{left:10px!important;right:10px!important;bottom:10px!important;top:auto!important;display:grid!important;grid-template-columns:1fr auto auto!important;gap:6px!important;}
+  .auth-user-bar button{padding:7px 8px!important;font-size:10.5px!important;}
+}
+
+.v-basic-1-13-final-polish .weekly-unit-name-field small{
+  display:block!important;
+  margin-top:4px!important;
+  color:#64748b!important;
+  font-size:11px!important;
+  line-height:1.35!important;
+  font-weight:700!important;
+}
+.v-basic-1-13-final-polish .weekly-unit-name-field input{
+  font-weight:900!important;
+  background:#fff!important;
+}
+
+.v-basic-1-13-final-polish .event-retreat-schedule-page{
+  padding:24px 32px 20px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .doc-header{
+  margin-bottom:6px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .header-line{
+  margin-bottom:10px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .doc-section{
+  padding:10px 12px!important;
+  margin-bottom:0!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .doc-section h2{
+  font-size:15px!important;
+  margin-bottom:6px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .schedule-tight-grid{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:850px!important;
+  overflow:hidden!important;
+  border:1px solid #dbe3ee!important;
+  border-radius:12px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable{
+  width:100%!important;
+  height:auto!important;
+  table-layout:fixed!important;
+  font-size:calc(9.8px * var(--scheduleTextScale,1))!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable th,
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable td{
+  padding:2px 3px!important;
+  line-height:1.05!important;
+  border-color:#dbe3ee!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable thead th{
+  height:24px!important;
+  font-size:calc(9.6px * var(--scheduleTextScale,1))!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable tbody th{
+  width:58px!important;
+  font-size:calc(8.4px * var(--scheduleTextScale,1))!important;
+  padding:1px 2px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable td{
+  height:var(--scheduleRowH,18px)!important;
+  min-height:var(--scheduleRowH,18px)!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable .simple-schedule-event{
+  padding:1px 2px!important;
+  overflow:hidden!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable .simple-schedule-event b{
+  font-size:calc(9px * var(--scheduleTextScale,1))!important;
+  line-height:1.06!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable .simple-schedule-event small{
+  font-size:calc(7.8px * var(--scheduleTextScale,1))!important;
+  line-height:1.05!important;
+  margin-top:1px!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:1!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable.compact-timetable th,
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable.compact-timetable td{
+  padding:1px 2px!important;
+}
+.v-basic-1-13-final-polish .event-retreat-schedule-page .simple-timetable.compact-timetable .simple-schedule-event b{
+  -webkit-line-clamp:1!important;
+}
+
+.v-basic-1-13-final-polish .budget-collapsible-card>summary:before{
+  content:'열기'!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:38px!important;
+  height:22px!important;
+  margin-right:7px!important;
+  border-radius:999px!important;
+  background:#eff6ff!important;
+  border:1px solid #bfdbfe!important;
+  color:#1d4ed8!important;
+  font-size:11px!important;
+  font-weight:950!important;
+}
+.v-basic-1-13-final-polish .budget-collapsible-card[open]>summary:before{
+  content:'접기'!important;
+  background:#0f172a!important;
+  border-color:#0f172a!important;
+  color:#fff!important;
+}
+.v-basic-1-13-final-polish .budget-collapsible-card>summary{
+  grid-template-columns:auto minmax(86px,1fr) minmax(0,1.4fr) auto!important;
+  align-items:center!important;
+}
+.v-basic-1-13-final-polish .budget-card-guide b{color:#1d4ed8!important;}
+@media(max-width:760px){
+  .v-basic-1-13-final-polish .budget-collapsible-card>summary{grid-template-columns:auto minmax(0,1fr) auto!important;}
+}
+
+.v-basic-1-13-final-polish .page .doc-table,
+.v-basic-1-13-final-polish .page .weekly-status-table,
+.v-basic-1-13-final-polish .page .budget-two-tables .doc-table{
+  font-size:var(--tableSize,13px)!important;
+}
+.v-basic-1-13-final-polish .page .doc-table th,
+.v-basic-1-13-final-polish .page .doc-table td,
+.v-basic-1-13-final-polish .page .weekly-status-table th,
+.v-basic-1-13-final-polish .page .weekly-status-table td{
+  font-size:inherit!important;
+  line-height:1.28!important;
+}
+.v-basic-1-13-final-polish .page.font-auto-fit .doc-table,
+.v-basic-1-13-final-polish .page.font-auto-fit .weekly-status-table{
+  font-size:calc(var(--tableSize,13px) * .9)!important;
+}
