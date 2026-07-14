@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.15 판매 전 최종 정리판: 브랜드 표기 정리·일정표 여유형·예산/하단바 안정화
+// BASIC 1.16 사용설명서 내장판: 앱 안 도움말·일정표 편집판 줄바꿈 보강
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
@@ -1772,7 +1772,7 @@ function V21ScheduleBlock({doc,setDoc}){
     setRows(next,false);
   }
   const visible=rows.map((r,i)=>({...r,_i:i})).filter(r=>(r.day||days[0])===activeDay);
-  return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible v16-schedule-time-polish v17-schedule-select-editor v111-schedule-edit-order"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>편집판은 추가 순서를 유지합니다. 필요할 때만 “현재 일차 시간순 정리”를 눌러 정돈하세요.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b>{activeDay} 일정 수정</b><div><button type="button" className="btn" onClick={sortActiveDay}>현재 일차 시간순 정리</button><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div><p className="schedule-time-help v17-schedule-time-help"><b>시간은 직접 쓰지 않고 선택합니다.</b> 새 일정을 추가한 뒤 시작 시간을 고르면 종료 시간은 기본 1시간 뒤로 자동 입력됩니다. 편집 중에는 카드가 자동으로 움직이지 않고, 원할 때 “현재 일차 시간순 정리”를 눌러 정돈합니다.</p>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`schedule-row-${r._i}`} row={r} index={r._i} days={days} doc={doc} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i),false)} onPatch={(k,v,commit)=>patch(r._i,k,v,commit)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>
+  return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible v16-schedule-time-polish v17-schedule-select-editor v111-schedule-edit-order"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>편집판은 추가 순서를 유지합니다. 필요할 때만 “현재 일차 시간순 정리”를 눌러 정돈하세요.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b className="schedule-day-title">{activeDay} 일정 수정</b><div><button type="button" className="btn" onClick={sortActiveDay}>현재 일차 시간순 정리</button><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div><p className="schedule-time-help v17-schedule-time-help"><b>시간은 직접 쓰지 않고 선택합니다.</b> 새 일정을 추가한 뒤 시작 시간을 고르면 종료 시간은 기본 1시간 뒤로 자동 입력됩니다. 편집 중에는 카드가 자동으로 움직이지 않고, 원할 때 “현재 일차 시간순 정리”를 눌러 정돈합니다.</p>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`schedule-row-${r._i}`} row={r} index={r._i} days={days} doc={doc} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i),false)} onPatch={(k,v,commit)=>patch(r._i,k,v,commit)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>
 }
 function V21BudgetBlock({doc,setDoc}){
   const income=doc.incomeItems?.length?doc.incomeItems:[budgetRow()];
@@ -3085,7 +3085,7 @@ function RibbonStyleTools({doc,setDoc,type,compact=false}){
   </div>
 }
 
-function DocumentRibbon({type,doc,setDoc,view,setView,busy,onPDF,onPNG,onSave,onBackup,onShare,onSample,onBlank,onImport,savedAt}){
+function DocumentRibbon({type,doc,setDoc,view,setView,busy,onPDF,onPNG,onSave,onBackup,onShare,onSample,onBlank,onImport,savedAt,onHelp}){
   const [tab,setTab]=useState('홈');
   function jump(selector,openDrawer=false){
     if(openDrawer){const drawer=document.querySelector('.edit-drawer'); if(drawer)drawer.open=true;}
@@ -3098,7 +3098,7 @@ function DocumentRibbon({type,doc,setDoc,view,setView,busy,onPDF,onPNG,onSave,on
       <div className="ribbon-tab-row" role="tablist" aria-label="빠른 메뉴 탭">
         {tabs.map(t=><button key={t} type="button" role="tab" aria-selected={tab===t} className={tab===t?'active':''} onClick={()=>setTab(t)}>{t}</button>)}
       </div>
-      <div className="ribbon-hero-actions"><button type="button" onClick={onSave}>저장하기</button><button type="button" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF 중…':'PDF 저장'}</button><button type="button" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG 중…':'PNG 저장'}</button></div>
+      <div className="ribbon-hero-actions"><button type="button" className="ribbon-help-btn" onClick={onHelp}>사용법</button><button type="button" onClick={onSave}>저장하기</button><button type="button" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF 중…':'PDF 저장'}</button><button type="button" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG 중…':'PNG 저장'}</button></div>
     </div>
     <div className={'ribbon-panel ribbon-panel-'+tab.replace('·','-')}>
       {tab==='홈'&&<div className="ribbon-home-grid"><div className="ribbon-group"><em>바로 작업</em><button type="button" onClick={()=>jump('.edit-drawer',true)}>전체 입력</button><button type="button" onClick={()=>jump('.preview-pane')}>미리보기</button><button type="button" onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게 보기':'한눈 보기'}</button></div><div className="ribbon-group"><em>자주 쓰는 저장</em><button type="button" onClick={onSave}>저장</button><button type="button" disabled={!!busy} onClick={onPDF}>PDF</button><button type="button" disabled={!!busy} onClick={onPNG}>PNG</button></div><div className="ribbon-group"><em>빠른 글자</em><FontQuickControls doc={doc} setDoc={setDoc} compact/></div><div className="ribbon-group"><em>추천 디자인</em><RibbonStyleTools type={type} doc={doc} setDoc={setDoc} compact/></div></div>}
@@ -3253,6 +3253,36 @@ function quickTabFromPreviewClick(docType,sectionKey,sectionTitle){
   }
   return 'basic';
 }
+
+const GUIDE_DOC_TIPS={
+  '기본 공지 안내문':['공지 제목·일시·장소를 먼저 입력하세요.','카카오톡 공유용은 본문을 짧게 쓰고 확인사항을 카드처럼 정리하면 좋습니다.','PNG 저장 후 단체방에 올리면 이미지 안내문처럼 사용할 수 있습니다.'],
+  '각부 월간행사 안내':['핵심 일정은 3~5개 정도가 가장 잘 보입니다.','확인 및 협조 요청은 줄바꿈으로 나누면 미리보기에서 깔끔하게 정리됩니다.','기도제목은 짧은 문장으로 2~3개 정도 입력하는 것을 권장합니다.'],
+  '부서별 주간보고서':['부서명·기간·작성자를 먼저 입력한 뒤 이번 주 활동과 다음 주 계획을 정리하세요.','출석 숫자는 크게 보이도록 구성되어 있습니다.','표 안 글씨가 길면 문서 기본도구에서 글씨 크기를 작게 조정하세요.'],
+  '부서 통합 주간보고서':['부서/팀명은 엔터 없이 입력하면 바로 반영됩니다.','교육부뿐 아니라 예배부·선교부·속회·소그룹 등으로 자유롭게 바꿀 수 있습니다.','부서별 현황의 문장이 길면 자동 줄바꿈되지만, 보고용으로는 짧게 정리하는 것이 좋습니다.'],
+  '행사 및 수련회 기획안':['1쪽은 목적·개요·역할·준비사항을 정리합니다.','2쪽 일정표는 일차별로 입력하고, 필요할 때 “현재 일차 시간순 정리”를 눌러 정돈하세요.','일정이 많으면 출력 방식을 “일차별 여유형”으로 바꾸면 A4 여러 장으로 더 읽기 좋습니다.','예산은 금액 중심으로 입력하고, 필요할 때만 상세 산출을 열어 사용하세요.']
+};
+function BuiltInGuideModal({type,onClose,onJump}){
+  const tips=GUIDE_DOC_TIPS[type]||['왼쪽에서 문서를 선택하고, 문서 편집판에서 내용을 입력하세요.','미리보기를 확인한 뒤 PDF 또는 PNG로 저장하세요.'];
+  const homeUrl=appHomeUrl();
+  return <div className="guide-backdrop" role="dialog" aria-modal="true" aria-label="교회문서키트 BASIC 사용법" onMouseDown={onClose}>
+    <div className="guide-modal" onMouseDown={e=>e.stopPropagation()}>
+      <div className="guide-head"><div><span>도움말</span><h2>교회문서키트 BASIC 사용법</h2><p>작성 중 헷갈릴 때 바로 확인하는 간단 설명서입니다.</p></div><button type="button" onClick={onClose}>닫기</button></div>
+      <div className="guide-steps">
+        <button type="button" onClick={()=>onJump?.('.sidebar')}><b>1</b><strong>문서 선택</strong><em>필요한 문서 5종 중 하나를 고릅니다.</em></button>
+        <button type="button" onClick={()=>onJump?.('.edit-drawer',true)}><b>2</b><strong>내용 입력</strong><em>문서 편집판에서 제목·일정·표를 수정합니다.</em></button>
+        <button type="button" onClick={()=>onJump?.('.preview-pane')}><b>3</b><strong>미리보기 확인</strong><em>A4 모양과 줄바꿈을 확인합니다.</em></button>
+        <button type="button" onClick={()=>onJump?.('.document-ribbon .ribbon-panel-저장-출력')}><b>4</b><strong>PDF/PNG 저장</strong><em>회의자료·카톡 이미지로 저장합니다.</em></button>
+      </div>
+      <div className="guide-grid">
+        <section><h3>현재 문서 사용 팁</h3><ul>{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></section>
+        <section><h3>저장·접속 안내</h3><ul><li>메일의 Sign in 링크는 로그인용 임시 링크입니다.</li><li>계속 사용할 주소는 작성기 기본 주소입니다.</li><li>개인 PC에서는 로그아웃하지 않고 창만 닫아도 됩니다.</li><li>공용 PC에서는 “공용 PC에서 로그아웃”을 눌러 주세요.</li></ul><div className="guide-url"><code>{homeUrl}</code></div></section>
+        <section><h3>자주 묻는 질문</h3><dl><dt>매번 이메일 로그인해야 하나요?</dt><dd>개인 PC에서는 로그아웃하지 않으면 로그인 상태가 유지됩니다.</dd><dt>일정표가 많으면 어떻게 하나요?</dt><dd>행사 및 수련회 기획안에서 일정표 출력 방식을 “일차별 여유형”으로 선택하세요.</dd><dt>글씨가 표 밖으로 나가면요?</dt><dd>문서 기본도구에서 글자 크기를 작게 조정하거나 문장을 짧게 나눠 주세요.</dd></dl></section>
+        <section><h3>바로 이동</h3><div className="guide-actions"><button type="button" onClick={()=>onJump?.('.edit-drawer',true)}>문서 편집판 열기</button><button type="button" onClick={()=>onJump?.('.preview-pane')}>미리보기 보기</button><button type="button" onClick={()=>onJump?.('.document-ribbon')}>저장 메뉴 보기</button></div></section>
+      </div>
+    </div>
+  </div>;
+}
+
 function AppShell(){
   const [all,setAll]=useAutosave();
   const [type,setType]=useState('기본 공지 안내문');
@@ -3264,6 +3294,7 @@ function AppShell(){
   const [mobileSimple,setMobileSimple]=useState(true);
   const [mobileStage,setMobileStage]=useState('write');
   const [easyMode,setEasyMode]=useState(()=>{try{return localStorage.getItem('church-docs-workshop-easy-mode')!=='off'}catch{return true}});
+  const [helpOpen,setHelpOpen]=useState(false);
   const [recentDocs,setRecentDocs]=useState(()=>{try{return JSON.parse(localStorage.getItem('church-docs-workshop-recent-docs')||'[]')}catch{return []}});
   useEffect(()=>{try{localStorage.setItem('church-docs-workshop-easy-mode',easyMode?'on':'off')}catch{}},[easyMode]);
   useEffect(()=>{setRecentDocs(prev=>{const next=[type,...prev.filter(x=>x!==type)].slice(0,8);try{localStorage.setItem('church-docs-workshop-recent-docs',JSON.stringify(next))}catch{}return next})},[type]);
@@ -3503,7 +3534,7 @@ function AppShell(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3513,6 +3544,7 @@ function AppShell(){
       <div className="topbar simple-topbar">
         <div className="top-title"><h2>{type}</h2><p>반복되는 교회 문서를 10분 안에 작성하고 PDF/PNG로 저장합니다.</p></div>
         <div className="actions primary-actions">
+          <button type="button" className="help-main-button" onClick={()=>setHelpOpen(true)}>사용법</button>
           {easyMode? <>
             <button onClick={()=>setView(view==='fit'?'large':'fit')}>{view==='fit'?'크게보기':'한눈보기'}</button>
             <button className="save-btn" onClick={saveNow}>저장하기</button>
@@ -3537,7 +3569,7 @@ function AppShell(){
       <MobileNotice/>
       <MobileModeBar stage={mobileStage} setStage={setMobileStage}/>
       <MobileQuickEdit type={type} doc={doc} setDoc={setDoc} setStage={setMobileStage} mobileSimple={mobileSimple} setMobileSimple={setMobileSimple}/><MobileExportPanel busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} savedAt={savedAt}/>
-      <DocumentRibbon type={type} doc={doc} setDoc={setDoc} view={view} setView={setView} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} onSave={saveNow} onBackup={exportData} onShare={shareCurrent} onSample={resetDoc} onBlank={startBlank} onImport={importData} savedAt={savedAt}/>
+      <DocumentRibbon type={type} doc={doc} setDoc={setDoc} view={view} setView={setView} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} onSave={saveNow} onBackup={exportData} onShare={shareCurrent} onSample={resetDoc} onBlank={startBlank} onImport={importData} savedAt={savedAt} onHelp={()=>setHelpOpen(true)}/>
       <div className="workspace preview-first-workspace">
         <section className="form-pane compact-form-pane"><details className="edit-drawer v22-controller-drawer" open><summary><b>문서 편집판</b><span>미리보기에서 선택한 페이지·섹션·표를 수정합니다.</span></summary><GenericEditor type={type} doc={doc} setDoc={setDoc} selectedTypes={bundleTypes} allDocs={all} setAllDocs={setAll}/></details></section>
         <section className="preview-pane">
@@ -3547,6 +3579,7 @@ function AppShell(){
       </div>
       <MobileBottomNav stage={mobileStage} setStage={setMobileStage} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')}/>
     </main>
+    {helpOpen&&<BuiltInGuideModal type={type} onClose={()=>setHelpOpen(false)} onJump={(selector,open)=>{setHelpOpen(false);setTimeout(()=>scrollToMobileTarget(selector,open),60)}}/>}
   </div>
 }
 
