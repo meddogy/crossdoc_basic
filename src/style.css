@@ -11235,3 +11235,58 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 
 /* BASIC 1.0.9: 로그인 오류 진단 표시 */
 .auth-debug{margin-top:12px;border:1px dashed #cbd5e1;background:#f8fafc;border-radius:14px;padding:10px 12px;color:#475569;font-size:12px;line-height:1.45}.auth-debug summary{cursor:pointer;font-weight:900;color:#334155}.auth-debug p{margin:7px 0;color:#475569}.auth-debug code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:2px 5px;color:#0f172a;word-break:break-all}
+
+/* BASIC 1.2: 앱처럼 사용하기(PWA) 안내 + 로그아웃 문구 안정화 */
+.auth-user-bar em{
+  display:inline-block;
+  margin-left:8px;
+  padding-left:8px;
+  border-left:1px solid #dbe3ee;
+  color:#64748b;
+  font-style:normal;
+  font-weight:800;
+}
+.auth-user-bar button{
+  background:#0f172a!important;
+  color:#fff!important;
+  border-color:#0f172a!important;
+}
+.pwa-banner{
+  position:fixed;
+  left:280px;
+  right:22px;
+  top:72px;
+  z-index:980;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  background:rgba(255,255,255,.96);
+  border:1px solid #bfdbfe;
+  border-left:6px solid #0b2d5c;
+  border-radius:18px;
+  padding:14px 16px;
+  box-shadow:0 16px 38px rgba(15,23,42,.14);
+  color:#0f172a;
+  backdrop-filter:blur(8px);
+}
+.pwa-banner b{display:block;font-size:15px;letter-spacing:-.03em;color:#0f172a;margin-bottom:4px}
+.pwa-banner p{margin:0;color:#475569;font-size:12.5px;line-height:1.45;word-break:keep-all;font-weight:800}
+.pwa-banner details{margin-top:7px;color:#475569;font-size:12px;line-height:1.45}
+.pwa-banner summary{cursor:pointer;font-weight:950;color:#0b2d5c}
+.pwa-banner ul{margin:7px 0 0;padding-left:18px}
+.pwa-banner li{margin:2px 0;word-break:keep-all}
+.pwa-actions{display:flex;gap:8px;flex:0 0 auto;align-items:center}
+.pwa-actions button{border:1px solid #cbd5e1;border-radius:999px;padding:8px 11px;font-weight:950;cursor:pointer;white-space:nowrap}
+.pwa-install{background:#0f172a;color:#fff;border-color:#0f172a!important}
+.pwa-dismiss{background:#fff;color:#334155}
+@media(max-width:1100px){
+  .pwa-banner{left:18px;right:18px;top:86px}
+}
+@media(max-width:720px){
+  .auth-user-bar em{display:none}
+  .auth-user-bar button{font-size:11px;padding:7px 9px}
+  .pwa-banner{left:10px;right:10px;top:10px;flex-direction:column;border-radius:16px;padding:12px 13px;z-index:1001}
+  .pwa-actions{width:100%;justify-content:flex-end}
+  .pwa-actions button{padding:8px 10px;font-size:12px}
+}
