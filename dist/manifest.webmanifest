@@ -1,7 +1,7 @@
 {
   "name": "교회문서키트 BASIC",
   "short_name": "문서키트",
-  "description": "교회 공지문, 월간행사 안내, 교육부서 주간보고서를 작성하고 PDF/PNG로 저장하는 작성기",
+  "description": "교회 공지문, 월간행사 안내, 부서별·통합 주간보고서, 행사 및 수련회 기획안을 작성하고 PDF/PNG로 저장하는 작성기",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

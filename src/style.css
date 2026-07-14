@@ -11305,3 +11305,53 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .pwa-actions{width:100%;justify-content:flex-end}
   .pwa-actions button{padding:8px 10px;font-size:12px}
 }
+
+/* BASIC 1.4 complete set: generic weekly reports + clearer retreat schedule editor */
+.v-basic-1-4-complete-set .weekly-unit-edit{
+  border:1px solid #dbe7f3;
+  background:#fbfdff;
+  border-radius:16px;
+  padding:14px;
+  margin:10px 0;
+}
+.v-basic-1-4-complete-set .weekly-unit-head{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) auto;
+  gap:10px;
+  align-items:end;
+  margin-bottom:10px;
+}
+.v-basic-1-4-complete-set .weekly-unit-head button{
+  border:1px solid #fecdd3;
+  background:#fff1f2;
+  color:#be123c;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-day-tabs-strong{
+  margin-top:12px;
+  grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-day-tabs-strong button{
+  min-height:54px;
+  border-width:2px;
+  font-size:15px;
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-day-tabs-strong button span{
+  letter-spacing:-.02em;
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-day-tabs-strong button.active{
+  box-shadow:0 8px 20px rgba(15,23,42,.16);
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-day-toolbar{
+  background:#eef6ff;
+  border-color:#bfdbfe;
+}
+.v-basic-1-4-complete-set .schedule-day-editor-clear .schedule-card-list{
+  margin-top:10px;
+}
+@media(max-width:760px){
+  .v-basic-1-4-complete-set .weekly-unit-head{grid-template-columns:1fr;}
+}
