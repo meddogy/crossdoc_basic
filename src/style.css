@@ -11710,3 +11710,71 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .budget-card-actions{display:block;}
   .budget-card-actions .hint{text-align:left;margin-top:8px!important;}
 }
+
+/* BASIC 1.11 판매 전 안정화판 */
+.v-basic-1-11-final-stabilize .v111-schedule-edit-order .schedule-card-list .v21-row-card:first-child{
+  border-color:#dbeafe!important;
+  box-shadow:none!important;
+}
+.v-basic-1-11-final-stabilize .v111-schedule-edit-order .v21-block-head span,
+.v-basic-1-11-final-stabilize .v17-schedule-time-help{
+  color:#075985!important;
+}
+.v-basic-1-11-final-stabilize .weekly-id-manager .weekly-unit-head{
+  align-items:end!important;
+}
+.v-basic-1-11-final-stabilize .weekly-id-manager .weekly-unit-head .field{
+  flex:1 1 auto;
+  margin:0!important;
+}
+.v-basic-1-11-final-stabilize .weekly-status-stable{
+  table-layout:fixed!important;
+  width:100%!important;
+}
+.v-basic-1-11-final-stabilize .weekly-status-stable th,
+.v-basic-1-11-final-stabilize .weekly-status-stable td{
+  overflow-wrap:anywhere!important;
+  word-break:keep-all!important;
+  white-space:normal!important;
+  line-height:1.42!important;
+}
+.v-basic-1-11-final-stabilize .weekly-status-stable .weekly-dept-name span{
+  display:block!important;
+  min-width:0!important;
+  writing-mode:horizontal-tb!important;
+  word-break:keep-all!important;
+}
+.v-basic-1-11-final-stabilize .budget-direct-editor .budget-field.amount input{
+  font-weight:900!important;
+  color:#1d4ed8!important;
+  background:#f8fbff!important;
+}
+.v-basic-1-11-final-stabilize .budget-detail-calc{
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+  padding:8px 10px;
+  background:#f8fafc;
+}
+.v-basic-1-11-final-stabilize .budget-detail-calc>summary{
+  cursor:pointer;
+  font-size:12px;
+  font-weight:900;
+  color:#475569;
+  list-style:none;
+}
+.v-basic-1-11-final-stabilize .budget-detail-calc>summary::-webkit-details-marker{display:none!important;}
+.v-basic-1-11-final-stabilize .budget-detail-calc>p{
+  margin:6px 0 8px!important;
+  font-size:11px;
+  color:#64748b;
+}
+.v-basic-1-11-final-stabilize .event-retreat-budget-page .budget-two-tables{
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+}
+.v-basic-1-11-final-stabilize .event-retreat-budget-page .doc-table th,
+.v-basic-1-11-final-stabilize .event-retreat-budget-page .doc-table td{
+  word-break:keep-all!important;
+  overflow-wrap:anywhere!important;
+  white-space:normal!important;
+}
