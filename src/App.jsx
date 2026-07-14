@@ -8,12 +8,12 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.2 사용성 안정화판: 이메일 인증 + 앱처럼 사용하기(PWA) 안내
+// BASIC 1.3 편의성 정리판: 작성기 주소 복사 + 임시 로그인 링크 안내
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
-  mode:'Vercel API proxy + PWA usability',
-  note:'구매자 이메일 인증 후 앱처럼 사용할 수 있도록 설치 안내를 제공합니다.'
+  mode:'Vercel API proxy + PWA + shortcut helper',
+  note:'로그인 후 작성기 기본 주소를 복사하고 바로가기로 저장할 수 있도록 안내합니다.'
 };
 function readableSupabaseError(error){
   const parts=[];
@@ -110,6 +110,24 @@ function shouldShowPwaHelp(){
 function dismissPwaHelp(){
   try{localStorage.setItem(PWA_DISMISSED_STORAGE,'1')}catch{}
 }
+function appHomeUrl(){
+  const {origin,pathname}=window.location;
+  return `${origin}${pathname}`;
+}
+async function copyTextToClipboard(text){
+  if(navigator.clipboard?.writeText){
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const el=document.createElement('textarea');
+  el.value=text;
+  el.setAttribute('readonly','');
+  el.style.position='fixed';
+  el.style.left='-9999px';
+  document.body.appendChild(el);
+  el.select();
+  try{return document.execCommand('copy')}finally{document.body.removeChild(el)}
+}
 function usePwaInstallPrompt(){
   const [promptEvent,setPromptEvent]=useState(null);
   const [installed,setInstalled]=useState(false);
@@ -136,16 +154,29 @@ function usePwaInstallPrompt(){
 }
 function PwaInstallBanner(){
   const [visible,setVisible]=useState(shouldShowPwaHelp());
+  const [copied,setCopied]=useState(false);
   const {promptEvent,installed,install}=usePwaInstallPrompt();
   if(!visible||installed)return null;
+  const homeUrl=appHomeUrl();
   const close=()=>{dismissPwaHelp();setVisible(false)};
+  async function copyHomeUrl(){
+    try{
+      await copyTextToClipboard(homeUrl);
+      setCopied(true);
+      setTimeout(()=>setCopied(false),1800);
+    }catch{
+      alert(`아래 주소를 복사해 주세요.\n\n${homeUrl}`);
+    }
+  }
   return <div className="pwa-banner">
     <div>
-      <b>작성기를 앱처럼 사용하세요</b>
-      <p>개인 PC에서는 로그인 후 로그아웃하지 말고 창만 닫아도 됩니다. 다음부터는 즐겨찾기나 바탕화면 아이콘으로 바로 여세요.</p>
+      <b>바로가기용 주소를 저장해 주세요</b>
+      <p>메일의 Sign in 링크는 임시 로그인용입니다. 계속 사용할 주소는 작성기 기본 주소입니다.</p>
+      <div className="shortcut-url"><code>{homeUrl}</code></div>
       <details>
         <summary>바로가기 만드는 방법</summary>
         <ul>
+          <li>먼저 <b>작성기 주소 복사</b>를 눌러 주소를 저장해 두세요.</li>
           <li>Chrome/Edge: 주소창 오른쪽 설치 아이콘 또는 메뉴 → 앱 설치</li>
           <li>Safari Mac: 공유 버튼 → Dock에 추가 또는 책갈피 추가</li>
           <li>iPhone/iPad: 공유 버튼 → 홈 화면에 추가</li>
@@ -153,6 +184,7 @@ function PwaInstallBanner(){
       </details>
     </div>
     <div className="pwa-actions">
+      <button className="pwa-copy" onClick={copyHomeUrl}>{copied?'주소 복사됨':'작성기 주소 복사'}</button>
       {promptEvent&&<button className="pwa-install" onClick={install}>이 기기에 설치</button>}
       <button className="pwa-dismiss" onClick={close}>닫기</button>
     </div>
@@ -168,6 +200,7 @@ function AuthGate({children}){
   const [errorDetail,setErrorDetail]=useState('');
   const [session,setSession]=useState(null);
   const [formEmail,setFormEmail]=useState('');
+  const [copiedAddress,setCopiedAddress]=useState(false);
   useEffect(()=>{
     let cancelled=false;
     async function boot(){
@@ -208,12 +241,21 @@ function AuthGate({children}){
     try{
       await requestMagicLink(clean);
       setStatus('emailSent');
-      setMessage(`${clean} 주소로 로그인 링크를 보냈습니다. 메일함을 확인해 주세요.`);
+      setMessage(`${clean} 주소로 로그인 링크를 보냈습니다. 메일의 Sign in 링크는 로그인용 임시 링크입니다. 로그인 후에는 작성기 기본 주소를 바로가기/즐겨찾기로 저장해 주세요.`);
     }catch(e){
       console.error(e);
       setStatus('signedOut');
       setError('로그인 링크 발송에 실패했습니다. 아래 상세 오류를 확인해 주세요.');
       setErrorDetail(readableSupabaseError(e));
+    }
+  }
+  async function copyAppAddress(){
+    try{
+      await copyTextToClipboard(appHomeUrl());
+      setCopiedAddress(true);
+      setTimeout(()=>setCopiedAddress(false),1800);
+    }catch{
+      alert(`아래 작성기 주소를 복사해 주세요.\n\n${appHomeUrl()}`);
     }
   }
   function signOut(){
@@ -223,8 +265,8 @@ function AuthGate({children}){
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.2 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 개인 PC에서는 로그아웃하지 않고 창만 닫아도 로그인 상태가 유지됩니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>작성기 링크가 공유되어도 등록되지 않은 이메일은 사용할 수 없습니다. 로그인 메일이 보이지 않으면 스팸함도 확인해 주세요.</small></form></div>;
-  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>개인 PC는 창만 닫으세요</em></span><button onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 다음 접속 시 이메일 링크 인증이 다시 필요합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{children}</>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.3 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
+  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>개인 PC는 창만 닫으세요</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 다음 접속 시 이메일 링크 인증이 다시 필요합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{children}</>;
 }
 
 const DEPARTMENTS=['선교부','교육부','문화부','예배부','사회봉사부','관리부','재정부','속회','소그룹','청년부','기타'];
