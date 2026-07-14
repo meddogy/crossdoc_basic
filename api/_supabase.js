@@ -103,7 +103,7 @@ export async function supabaseRequest(path, { method = 'GET', token, body, query
         Authorization: `Bearer ${token || anonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Client-Info': 'church-docs-kit-basic/1.1',
+        'X-Client-Info': 'church-docs-kit-basic/1.15',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
