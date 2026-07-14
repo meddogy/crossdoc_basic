@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.16 사용설명서 내장판: 앱 안 도움말·일정표 편집판 줄바꿈 보강
+// BASIC 1.17 베타 신청/관리판: 앱 안 도움말·일정표 편집판 줄바꿈 보강
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
@@ -89,6 +89,17 @@ async function apiPost(path,payload){
   }
   return data;
 }
+
+async function submitBetaApplication(payload){
+  return apiPost('/api/beta-apply',payload);
+}
+async function loadBetaApplications(passcode){
+  return apiPost('/api/beta-list',{passcode});
+}
+async function updateBetaApplication(passcode,id,action){
+  return apiPost('/api/approve-beta',{passcode,id,action});
+}
+
 async function requestMagicLink(email){
   const clean=normalizeEmail(email);
   if(!clean)throw new Error('이메일을 입력해 주세요.');
@@ -3583,6 +3594,136 @@ function AppShell(){
   </div>
 }
 
-function App(){return <AuthGate><AppShell/></AuthGate>}
+
+const BETA_ROLE_OPTIONS=['담임목사','부목사/전도사','교육부 담당자','교회학교 부장','교사','청년부/청소년부 리더','행정간사','평신도 사역자','기타'];
+const BETA_DOC_OPTIONS=['기본 공지 안내문','각부 월간행사 안내','부서별 주간보고서','부서 통합 주간보고서','행사 및 수련회 기획안'];
+const BETA_DEVICE_OPTIONS=['윈도우 PC','Mac','태블릿','스마트폰','아직 모르겠습니다'];
+
+function BetaApplyPage(){
+  const [form,setForm]=useState({name:'',church:'',role:'',email:'',documents:[],device:'',message:'',consent:false});
+  const [status,setStatus]=useState('idle');
+  const [error,setError]=useState('');
+  const [saved,setSaved]=useState(null);
+  function update(key,value){setForm(prev=>({...prev,[key]:value}))}
+  function toggleDoc(doc){setForm(prev=>({
+    ...prev,
+    documents:prev.documents.includes(doc)?prev.documents.filter(x=>x!==doc):[...prev.documents,doc]
+  }))}
+  async function submit(e){
+    e.preventDefault();
+    setError('');setSaved(null);setStatus('saving');
+    try{
+      const data=await submitBetaApplication(form);
+      setSaved(data?.application||{});
+      setStatus('done');
+    }catch(e){
+      setStatus('idle');
+      setError(readableSupabaseError(e));
+    }
+  }
+  const home=appHomeUrl().replace(/\/(apply|admin)\/?$/,'');
+  return <div className="beta-public-page beta-apply-page">
+    <div className="beta-hero-card">
+      <div className="auth-logo">✚</div>
+      <p className="beta-eyebrow">교회문서키트 BASIC</p>
+      <h1>베타테스터 신청</h1>
+      <p>교회 공지문, 주간보고서, 월간행사 안내, 행사 및 수련회 기획안을 웹에서 작성하고 PDF/PNG로 저장하는 교회 실무자용 문서 작성기입니다.</p>
+      <div className="beta-hero-actions"><a href={home}>작성기 로그인 화면</a><a href="/admin">관리자 승인 화면</a></div>
+    </div>
+    <form className="beta-form-card" onSubmit={submit}>
+      <h2>신청 정보</h2>
+      <p className="beta-muted">선정되신 분은 아래 이메일 주소로 작성기 사용 권한이 등록됩니다.</p>
+      <div className="beta-grid two">
+        <label><span>이름 *</span><input value={form.name} onChange={e=>update('name',e.target.value)} placeholder="홍길동" required /></label>
+        <label><span>교회명</span><input value={form.church} onChange={e=>update('church',e.target.value)} placeholder="예: 부천오정교회" /></label>
+      </div>
+      <div className="beta-grid two">
+        <label><span>사역/직분</span><select value={form.role} onChange={e=>update('role',e.target.value)}><option value="">선택해 주세요</option>{BETA_ROLE_OPTIONS.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+        <label><span>로그인용 이메일 *</span><input type="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="name@example.com" required /></label>
+      </div>
+      <fieldset className="beta-checks"><legend>테스트해보고 싶은 문서</legend>{BETA_DOC_OPTIONS.map(doc=><label key={doc}><input type="checkbox" checked={form.documents.includes(doc)} onChange={()=>toggleDoc(doc)} /> <span>{doc}</span></label>)}</fieldset>
+      <label><span>주로 사용할 기기</span><select value={form.device} onChange={e=>update('device',e.target.value)}><option value="">선택해 주세요</option>{BETA_DEVICE_OPTIONS.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+      <label><span>남기고 싶은 말</span><textarea value={form.message} onChange={e=>update('message',e.target.value)} rows={4} placeholder="평소 교회 문서 작성에서 불편했던 점이나 기대하는 점을 적어주세요." /></label>
+      <label className="beta-consent"><input type="checkbox" checked={form.consent} onChange={e=>update('consent',e.target.checked)} required /> <span>베타테스트 접속 안내와 피드백 확인을 위해 이름, 교회명, 이메일 주소를 수집하는 것에 동의합니다.</span></label>
+      {error&&<div className="beta-error">{error}</div>}
+      {status==='done'&&<div className="beta-success"><b>신청이 완료되었습니다.</b><br/>관리자가 승인하면 입력하신 이메일로 작성기 로그인이 가능해집니다. 신청 이메일: {saved?.email||form.email}</div>}
+      <button className="beta-primary" disabled={status==='saving'}>{status==='saving'?'신청 저장 중…':'베타테스터 신청하기'}</button>
+    </form>
+  </div>
+}
+
+function BetaAdminPage(){
+  const [passcode,setPasscode]=useState(()=>{try{return sessionStorage.getItem('church-docs-kit-admin-passcode')||''}catch{return ''}});
+  const [apps,setApps]=useState([]);
+  const [status,setStatus]=useState('idle');
+  const [error,setError]=useState('');
+  const [copiedId,setCopiedId]=useState('');
+  async function refresh(e){
+    e?.preventDefault?.();
+    setStatus('loading');setError('');
+    try{
+      const data=await loadBetaApplications(passcode);
+      try{sessionStorage.setItem('church-docs-kit-admin-passcode',passcode)}catch{}
+      setApps(data?.applications||[]);
+      setStatus('ready');
+    }catch(e){setStatus('idle');setError(readableSupabaseError(e));}
+  }
+  async function handleAction(app,action){
+    const label=action==='approve'?'승인':action==='reject'?'거절':'대기 전환';
+    if(!confirm(`${app.name||app.email} 신청을 ${label} 처리할까요?`))return;
+    setStatus('working');setError('');
+    try{await updateBetaApplication(passcode,app.id,action);await refresh();}
+    catch(e){setStatus('ready');setError(readableSupabaseError(e));}
+  }
+  function mailText(app){
+    const base=appHomeUrl().replace(/\/admin\/?$/,'');
+    return `안녕하세요. ${app.name||''}님.\n\n교회문서키트 BASIC 베타테스터로 선정되셨습니다.\n아래 작성기 주소로 접속하신 뒤, 신청하신 이메일(${app.email})로 로그인해 주세요.\n\n작성기 주소:\n${base}\n\n사용 방법:\n1. 작성기 주소에 접속합니다.\n2. 신청하신 이메일을 입력합니다.\n3. 이메일로 도착한 Sign in 링크를 클릭합니다.\n4. 작성기 화면이 열리면 문서를 선택해 작성합니다.\n5. PDF 또는 PNG로 저장해봅니다.\n\n중요 안내:\n- 메일로 온 Sign in 링크는 임시 로그인용입니다.\n- 로그인 후에는 작성기 기본 주소를 즐겨찾기 또는 바탕화면 바로가기로 저장해 주세요.\n- 개인 PC에서는 로그아웃하지 않고 창만 닫으셔도 됩니다.\n- 공용 PC에서 사용하신 경우에만 “공용 PC에서 로그아웃”을 눌러주세요.\n\n감사합니다.`;
+  }
+  async function copyMail(app){
+    try{await copyTextToClipboard(mailText(app));setCopiedId(app.id);setTimeout(()=>setCopiedId(''),1800)}
+    catch{alert(mailText(app))}
+  }
+  const counts=apps.reduce((m,a)=>{m[a.status]=(m[a.status]||0)+1;return m},{})
+  return <div className="beta-public-page beta-admin-page">
+    <div className="beta-hero-card admin">
+      <div className="auth-logo">✚</div>
+      <p className="beta-eyebrow">교회문서키트 BASIC</p>
+      <h1>베타 신청 관리</h1>
+      <p>신청자 목록을 확인하고 승인 버튼으로 작성기 사용 권한을 자동 등록합니다.</p>
+      <div className="beta-status-pills"><span>대기 {counts.pending||0}</span><span>승인 {counts.approved||0}</span><span>거절 {counts.rejected||0}</span></div>
+    </div>
+    <form className="beta-admin-login" onSubmit={refresh}>
+      <label><span>관리자 비밀번호</span><input type="password" value={passcode} onChange={e=>setPasscode(e.target.value)} placeholder="Vercel ADMIN_PASSCODE" /></label>
+      <button className="beta-primary" disabled={status==='loading'||status==='working'}>{status==='loading'?'불러오는 중…':'신청자 목록 불러오기'}</button>
+      <a className="beta-secondary-link" href="/apply">신청 페이지 보기</a>
+    </form>
+    {error&&<div className="beta-error wide">{error}</div>}
+    <div className="beta-admin-note"><b>승인</b>을 누르면 해당 이메일이 <code>allowed_users</code>에 <code>plan=beta</code>로 자동 등록됩니다. 안내문 복사는 메일 발송용 문구만 복사합니다.</div>
+    <div className="beta-list">
+      {apps.length===0?<div className="beta-empty">아직 불러온 신청자가 없습니다.</div>:apps.map(app=><article className={`beta-app-card status-${app.status||'pending'}`} key={app.id}>
+        <header><div><b>{app.name||'(이름 없음)'}</b><span>{app.church||'교회명 없음'} · {app.role||'직분 미입력'}</span></div><em>{app.status==='approved'?'승인됨':app.status==='rejected'?'거절됨':'대기중'}</em></header>
+        <p className="beta-email">{app.email}</p>
+        <p><b>희망 문서</b> {(app.documents||[]).join(', ')||'미선택'}</p>
+        <p><b>사용 기기</b> {app.device||'미입력'}</p>
+        {app.message&&<blockquote>{app.message}</blockquote>}
+        <small>신청일: {app.created_at?new Date(app.created_at).toLocaleString('ko-KR'):''}</small>
+        <div className="beta-card-actions">
+          <button onClick={()=>handleAction(app,'approve')} disabled={status==='working'}>승인 및 등록</button>
+          <button onClick={()=>handleAction(app,'pending')} disabled={status==='working'}>대기</button>
+          <button onClick={()=>handleAction(app,'reject')} disabled={status==='working'}>거절</button>
+          <button className="copy" onClick={()=>copyMail(app)}>{copiedId===app.id?'안내문 복사됨':'안내문 복사'}</button>
+        </div>
+      </article>)}
+    </div>
+  </div>
+}
+
+
+function App(){
+  const path=window.location.pathname.replace(/\/+$/,'');
+  if(path.endsWith('/apply'))return <BetaApplyPage/>;
+  if(path.endsWith('/admin'))return <BetaAdminPage/>;
+  return <AuthGate><AppShell/></AuthGate>;
+}
 
 export default App;

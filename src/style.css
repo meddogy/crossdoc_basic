@@ -12321,3 +12321,56 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .guide-head button{margin-top:12px;width:100%;}
   .guide-steps{grid-template-columns:1fr;}
 }
+
+/* BASIC 1.17 베타 신청/관리 페이지 */
+.beta-public-page{min-height:100vh;background:linear-gradient(135deg,#f8fbff 0%,#eef6ff 48%,#f8fafc 100%);padding:34px 18px 80px;color:#0f172a;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-sizing:border-box}
+.beta-public-page *{box-sizing:border-box}
+.beta-hero-card,.beta-form-card,.beta-admin-login,.beta-admin-note,.beta-empty,.beta-app-card{max-width:880px;margin:0 auto 18px;background:#fff;border:1px solid #dbe8f8;border-radius:28px;box-shadow:0 18px 50px rgba(15,23,42,.08);padding:30px}
+.beta-hero-card{display:flex;flex-direction:column;gap:10px}
+.beta-hero-card.admin{background:linear-gradient(135deg,#ffffff,#f0f7ff)}
+.beta-eyebrow{font-size:14px;font-weight:900;letter-spacing:.08em;color:#2563eb;margin:0;text-transform:uppercase}
+.beta-hero-card h1,.beta-form-card h2{margin:0;font-size:32px;line-height:1.15;letter-spacing:-.04em;color:#0f172a}
+.beta-hero-card p,.beta-muted{margin:0;color:#475569;font-size:16px;line-height:1.65;font-weight:650}
+.beta-hero-actions,.beta-status-pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.beta-hero-actions a,.beta-secondary-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:14px;border:1px solid #cfe0f5;background:#f8fbff;text-decoration:none;color:#0b2d5c;font-weight:900}
+.beta-status-pills span{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:999px;background:#eaf3ff;border:1px solid #bfdbfe;color:#0b4da2;font-weight:900}
+.beta-form-card{display:flex;flex-direction:column;gap:16px}
+.beta-form-card label,.beta-admin-login label{display:flex;flex-direction:column;gap:7px;font-weight:900;color:#26364d}
+.beta-form-card label span,.beta-admin-login label span{font-size:14px;color:#334155}
+.beta-form-card input,.beta-form-card select,.beta-form-card textarea,.beta-admin-login input{width:100%;border:1.5px solid #cbd9ea;background:#fff;border-radius:15px;min-height:50px;padding:12px 14px;font-size:16px;font-weight:750;color:#0f172a;outline:none}
+.beta-form-card textarea{min-height:110px;resize:vertical;line-height:1.55}
+.beta-form-card input:focus,.beta-form-card select:focus,.beta-form-card textarea:focus,.beta-admin-login input:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+.beta-grid.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.beta-checks{border:1px solid #dbe8f8;background:#f8fbff;border-radius:20px;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.beta-checks legend{padding:0 8px;color:#0f172a;font-size:15px;font-weight:950}
+.beta-checks label,.beta-consent{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:9px;padding:10px;border:1px solid #e2edf9;border-radius:14px;background:#fff;font-weight:800!important}
+.beta-checks input,.beta-consent input{width:auto!important;min-height:auto!important;margin-top:4px}
+.beta-consent{border:1.5px dashed #bdd6f5!important;background:#f8fbff!important}
+.beta-primary{border:0;border-radius:16px;min-height:52px;padding:0 20px;background:#0b2d5c;color:#fff;font-weight:950;font-size:16px;cursor:pointer;box-shadow:0 12px 25px rgba(11,45,92,.18)}
+.beta-primary:disabled{opacity:.55;cursor:not-allowed}
+.beta-success,.beta-error{border-radius:18px;padding:16px;font-weight:850;line-height:1.55;white-space:pre-wrap}
+.beta-success{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534}
+.beta-error{border:1px solid #fecdd3;background:#fff1f2;color:#be123c}
+.beta-error.wide{max-width:880px;margin:0 auto 18px}
+.beta-admin-login{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end}
+.beta-admin-note{font-size:14px;line-height:1.55;color:#475569;background:#f8fbff;box-shadow:none}
+.beta-list{max-width:880px;margin:0 auto;display:grid;gap:14px}
+.beta-empty{color:#64748b;text-align:center;font-weight:850;box-shadow:none}
+.beta-app-card{margin:0;padding:22px;border-radius:22px;box-shadow:0 10px 34px rgba(15,23,42,.06)}
+.beta-app-card.status-approved{border-color:#86efac;background:#fbfffd}
+.beta-app-card.status-rejected{border-color:#fecdd3;background:#fffafa}
+.beta-app-card header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid #e8f1fb;padding-bottom:12px;margin-bottom:12px}
+.beta-app-card header div{display:flex;flex-direction:column;gap:5px}
+.beta-app-card header b{font-size:20px;letter-spacing:-.02em}
+.beta-app-card header span,.beta-app-card small{color:#64748b;font-weight:750}
+.beta-app-card header em{font-style:normal;white-space:nowrap;background:#eaf3ff;color:#0b4da2;border:1px solid #bfdbfe;border-radius:999px;padding:7px 11px;font-weight:950;font-size:13px}
+.beta-app-card.status-approved header em{background:#dcfce7;color:#166534;border-color:#86efac}
+.beta-app-card.status-rejected header em{background:#ffe4e6;color:#be123c;border-color:#fecdd3}
+.beta-email{font-size:15px;font-weight:950;color:#0b2d5c;background:#f8fbff;border:1px solid #dbe8f8;border-radius:12px;padding:10px 12px;display:inline-block;margin:0 0 8px}
+.beta-app-card p{margin:8px 0;color:#334155;font-weight:700;line-height:1.55}
+.beta-app-card blockquote{margin:12px 0;border-left:4px solid #93c5fd;background:#f8fbff;border-radius:10px;padding:12px;color:#334155;font-weight:750;line-height:1.55}
+.beta-card-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.beta-card-actions button{border:1px solid #cfe0f5;background:#fff;border-radius:12px;min-height:38px;padding:0 13px;color:#0b2d5c;font-weight:950;cursor:pointer}
+.beta-card-actions button:first-child{background:#0b2d5c;color:#fff;border-color:#0b2d5c}
+.beta-card-actions button.copy{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+@media(max-width:760px){.beta-public-page{padding:18px 10px 70px}.beta-hero-card,.beta-form-card,.beta-admin-login,.beta-admin-note,.beta-empty,.beta-app-card{border-radius:22px;padding:20px}.beta-grid.two,.beta-checks,.beta-admin-login{grid-template-columns:1fr}.beta-hero-card h1,.beta-form-card h2{font-size:27px}.beta-app-card header{flex-direction:column}.beta-card-actions button{flex:1 1 130px}}

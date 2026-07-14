@@ -1,5 +1,9 @@
 {
   "installCommand": "npm ci --no-audit --no-fund",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/apply", "destination": "/" },
+    { "source": "/admin", "destination": "/" }
+  ]
 }

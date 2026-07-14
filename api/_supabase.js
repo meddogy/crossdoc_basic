@@ -34,6 +34,32 @@ export function getSupabaseConfig() {
   return { url, anonKey };
 }
 
+
+export function getServiceRoleKey() {
+  const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '').trim();
+  if (!serviceRoleKey) {
+    const error = new Error('SUPABASE_SERVICE_ROLE_KEY 환경변수가 비어 있습니다. Vercel 서버 환경변수에 service_role key를 등록해 주세요.');
+    error.status = 500;
+    throw error;
+  }
+  return serviceRoleKey;
+}
+
+export function checkAdminPasscode(passcode) {
+  const expected = String(process.env.ADMIN_PASSCODE || '').trim();
+  if (!expected) {
+    const error = new Error('ADMIN_PASSCODE 환경변수가 비어 있습니다. Vercel 서버 환경변수에 관리자 비밀번호를 등록해 주세요.');
+    error.status = 500;
+    throw error;
+  }
+  if (String(passcode || '').trim() !== expected) {
+    const error = new Error('관리자 비밀번호가 맞지 않습니다.');
+    error.status = 401;
+    throw error;
+  }
+  return true;
+}
+
 export function diagnostics(extra = {}) {
   try {
     const { url, anonKey } = getSupabaseConfig();
@@ -103,7 +129,7 @@ export async function supabaseRequest(path, { method = 'GET', token, body, query
         Authorization: `Bearer ${token || anonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Client-Info': 'church-docs-kit-basic/1.16',
+        'X-Client-Info': 'church-docs-kit-basic/1.17',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -125,6 +151,62 @@ export async function supabaseRequest(path, { method = 'GET', token, body, query
   if (!response.ok) {
     const detail = payload?.error_description || payload?.msg || payload?.message || payload?.error || JSON.stringify(payload || {});
     const error = new Error(detail || `Supabase 요청 실패: ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    error.endpoint = endpoint.toString();
+    error.responseText = text;
+    throw error;
+  }
+  return payload;
+}
+
+
+export async function serviceRoleRequest(path, { method = 'GET', body, query, timeoutMs = 15000, headers = {} } = {}) {
+  const { url } = getSupabaseConfig();
+  const serviceRoleKey = getServiceRoleKey();
+  const endpoint = new URL(`${url}${path}`);
+  if (query) {
+    Object.entries(query).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v) !== '') endpoint.searchParams.set(k, v);
+    });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error(`Supabase 관리자 요청 시간 초과: ${timeoutMs}ms`)), timeoutMs);
+  let response;
+  let text = '';
+  let payload = null;
+  try {
+    response = await fetch(endpoint.toString(), {
+      method,
+      signal: controller.signal,
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Client-Info': 'church-docs-kit-basic/1.17-admin',
+        ...headers,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    text = await response.text();
+  } catch (e) {
+    const error = new Error(e.message || 'fetch failed');
+    error.status = 500;
+    error.endpoint = endpoint.toString();
+    error.causeDetail = safeCause(e.cause || e);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (text) {
+    try { payload = JSON.parse(text); } catch { payload = { message: text }; }
+  }
+
+  if (!response.ok) {
+    const detail = payload?.error_description || payload?.msg || payload?.message || payload?.error || JSON.stringify(payload || {});
+    const error = new Error(detail || `Supabase 관리자 요청 실패: ${response.status}`);
     error.status = response.status;
     error.payload = payload;
     error.endpoint = endpoint.toString();
