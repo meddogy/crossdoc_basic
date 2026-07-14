@@ -11391,3 +11391,111 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 }
 .v16-schedule-time-polish .v21-time-field input::placeholder{color:#94a3b8!important;}
 .v16-schedule-time-polish .schedule-card-list .v21-row-card{transition:background .15s ease, border-color .15s ease;}
+
+/* BASIC 1.7 일정표 시간 선택형 편집판 */
+.v17-schedule-select-editor .v17-schedule-time-help{
+  background:#f0f9ff!important;
+  border-color:#bae6fd!important;
+  color:#075985!important;
+}
+.v17-schedule-select-editor .v17-time-pick-box{
+  border:1px solid #dbeafe;
+  background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:10px;
+}
+.v17-schedule-select-editor .v17-time-pick-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.v17-schedule-select-editor .v17-time-pick-title b{
+  font-size:13.5px;
+  color:#0f172a;
+  letter-spacing:-.03em;
+}
+.v17-schedule-select-editor .v17-time-pick-title span{
+  font-size:11.5px;
+  color:#64748b;
+  font-weight:800;
+  word-break:keep-all;
+}
+.v17-schedule-select-editor .v21-time-select select{
+  font-weight:950;
+  color:#0f172a;
+  background:#fff;
+}
+.v17-schedule-select-editor .v229-schedule-time-row{
+  grid-template-columns:minmax(100px,.7fr) minmax(140px,1fr) minmax(140px,1fr) minmax(100px,.7fr)!important;
+}
+.v17-schedule-select-editor .schedule-card-list .v21-row-card{
+  border-color:#e2e8f0!important;
+}
+.v17-schedule-select-editor .schedule-card-list .v21-row-card:first-child{
+  border-color:#7dd3fc!important;
+  box-shadow:0 12px 26px rgba(14,165,233,.12)!important;
+}
+@media(max-width:980px){
+  .v17-schedule-select-editor .v229-schedule-time-row{grid-template-columns:1fr 1fr!important;}
+  .v17-schedule-select-editor .v17-time-pick-title{display:block;}
+  .v17-schedule-select-editor .v17-time-pick-title span{display:block;margin-top:3px;}
+}
+@media(max-width:640px){
+  .v17-schedule-select-editor .v229-schedule-time-row{grid-template-columns:1fr!important;}
+}
+
+
+/* BASIC 1.8: 일정표 시간 선택 안정화 + 부서별 주간현황 표 넘침 방지 */
+.v-basic-1-8-time-weekly-fix .v17-schedule-select-editor .v21-time-select select{
+  cursor:pointer;
+  min-height:42px;
+  font-weight:800;
+}
+.v-basic-1-8-time-weekly-fix .v17-schedule-card .v229-schedule-time-row{
+  align-items:end;
+}
+.v-basic-1-8-time-weekly-fix .weekly-unit-name-field input{
+  font-weight:800;
+  background:#fff;
+}
+.v-basic-1-8-time-weekly-fix .weekly-unit-grid textarea,
+.v-basic-1-8-time-weekly-fix .weekly-unit-grid input{
+  min-width:0;
+}
+.v-basic-1-8-time-weekly-fix .weekly-status-table{
+  table-layout:fixed!important;
+  width:100%!important;
+  font-size:11.2px!important;
+  line-height:1.26!important;
+}
+.v-basic-1-8-time-weekly-fix .weekly-status-table th,
+.v-basic-1-8-time-weekly-fix .weekly-status-table td{
+  padding:6px 6px!important;
+  vertical-align:top!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:anywhere!important;
+}
+.v-basic-1-8-time-weekly-fix .weekly-status-table .weekly-dept-name{
+  font-weight:900;
+  color:var(--primary);
+}
+.v-basic-1-8-time-weekly-fix .weekly-status-table .weekly-attendance{
+  text-align:center;
+}
+.v-basic-1-8-time-weekly-fix .weekly-status-table .attendance-number-cell{
+  justify-content:center;
+  font-size:1.15em!important;
+}
+.v-basic-1-8-time-weekly-fix .weekly-cell-wrap,
+.v-basic-1-8-time-weekly-fix .weekly-cell-wrap .editable-text{
+  display:block;
+  max-width:100%;
+  white-space:pre-wrap!important;
+  word-break:keep-all!important;
+  overflow-wrap:anywhere!important;
+  line-height:1.28!important;
+}

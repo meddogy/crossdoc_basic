@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.6 일정표 입력 개선판: 일정 시간순 정렬 + 쉬운 시간 입력
+// BASIC 1.8 일정표 선택형 편집판: 시작/종료 시간 선택 + 시간순 정렬
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
@@ -265,7 +265,7 @@ function AuthGate({children}){
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.6 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.8 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
   return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>개인 PC는 창만 닫으세요</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 다음 접속 시 이메일 링크 인증이 다시 필요합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{children}</>;
 }
 
@@ -1539,6 +1539,34 @@ function V2QuickAddButtons({type,doc,setDoc}){
 
 function rowValue(row,key){return row?.[key]??''}
 function V21MiniField({label,value,onChange,type='text',wide=false,placeholder=''}){return <label className={wide?'v21-mini-field wide':'v21-mini-field'}><span>{label}</span><input type={type} value={value||''} placeholder={placeholder} onChange={e=>onChange(e.target.value)} /></label>}
+function scheduleTimeOptions(startHour=5,endHour=24,step=30){
+  const start=Math.max(0,Math.min(23,Number(startHour)||5))*60;
+  const endRaw=Math.max(1,Math.min(24,Number(endHour)||24))*60;
+  const end=Math.max(start+step,endRaw);
+  const list=[];
+  for(let m=start;m<=end;m+=step){
+    const h=Math.floor(m/60); const mm=m%60;
+    if(h>=24)break;
+    list.push(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
+  }
+  return list;
+}
+function koreanTimeLabel(value){
+  const normalized=normalizeTimeText(value);
+  const m=String(normalized||'').match(/^(\d{1,2}):(\d{2})$/);
+  if(!m)return value||'';
+  const h=Number(m[1]); const min=m[2];
+  const meridiem=h<12?'오전':'오후';
+  const hh=h===0?12:(h>12?h-12:h);
+  return `${meridiem} ${hh}:${min}`;
+}
+function V21TimeSelect({label,value,onChange,options,placeholder}){
+  const normalized=normalizeTimeText(value||'');
+  const baseOptions=options?.length?options:scheduleTimeOptions(5,24,30);
+  const optionList=normalized&&!baseOptions.includes(normalized)?[normalized,...baseOptions].sort((a,b)=>timeToMin(a)-timeToMin(b)):baseOptions;
+  const current=normalized&&optionList.includes(normalized)?normalized:'';
+  return <label className="v21-mini-field v21-time-select"><span>{label}</span><select value={current} onChange={e=>onChange(e.target.value)}><option value="">{placeholder||`${label} 선택`}</option>{optionList.map(o=><option key={o} value={o}>{koreanTimeLabel(o)} · {o}</option>)}</select></label>
+}
 function V21TimeField({label,value,onChange,onCommit}){
   function commit(v){const normalized=normalizeTimeText(v);(onCommit||onChange)(normalized||v)}
   return <label className="v21-mini-field v21-time-field"><span>{label}</span><input type="text" inputMode="numeric" value={value||''} placeholder="예: 13:30 / 오후 1:30" onFocus={e=>e.target.select()} onChange={e=>onChange(e.target.value)} onBlur={e=>commit(e.target.value)} /><small>클릭하면 전체 선택됩니다. 오후 1:30처럼 입력해도 13:30으로 정리됩니다.</small></label>
@@ -1627,17 +1655,48 @@ function V25ScheduleSetup({doc,setDoc,activeDay,setActiveDay}){
     </div>
   </section>
 }
-function V229ScheduleRowEditor({row,index,days,onPatch,onDelete,total}){
+function V229ScheduleRowEditor({row,index,days,onPatch,onDelete,total,doc}){
+  const timeOptions=scheduleTimeOptions(doc?.startHour||5,doc?.endHour||24,30);
   const normalizedStart=normalizeTimeText(row.start||'');
   const normalizedEnd=normalizeTimeText(row.end||'');
-  const titleText=[row.day,normalizedStart&&normalizedEnd?`${normalizedStart}-${normalizedEnd}`:normalizedStart,row.title].filter(Boolean).join(' · ');
+  const timeTitle=normalizedStart&&normalizedEnd?`${koreanTimeLabel(normalizedStart)}-${koreanTimeLabel(normalizedEnd)}`:normalizedStart?koreanTimeLabel(normalizedStart):'시간 미선택';
+  const titleText=[row.day,timeTitle,row.title].filter(Boolean).join(' · ');
+  function nearestEndAfter(startValue){
+    const startMin=timeToMin(startValue);
+    const after=timeOptions.find(o=>timeToMin(o)>=startMin+60);
+    return after||timeOptions.find(o=>timeToMin(o)>startMin)||timeOptions[timeOptions.length-1]||startValue;
+  }
+  function nearestStartBefore(endValue){
+    const endMin=timeToMin(endValue);
+    const before=[...timeOptions].reverse().find(o=>timeToMin(o)<=endMin-60);
+    return before||timeOptions.find(o=>timeToMin(o)<endMin)||timeOptions[0]||endValue;
+  }
+  function changeStart(nextStart){
+    if(!nextStart){onPatch({start:'',end:''},true);return;}
+    const currentEnd=normalizeTimeText(row.end||'');
+    const needEnd=!currentEnd || timeToMin(currentEnd)<=timeToMin(nextStart);
+    const nextEnd=needEnd?nearestEndAfter(nextStart):currentEnd;
+    onPatch({start:nextStart,end:nextEnd},true);
+  }
+  function changeEnd(nextEnd){
+    if(!nextEnd){onPatch('end','',true);return;}
+    const currentStart=normalizeTimeText(row.start||'');
+    if(currentStart && timeToMin(nextEnd)<=timeToMin(currentStart)){
+      onPatch({start:nearestStartBefore(nextEnd),end:nextEnd},true);
+      return;
+    }
+    onPatch('end',nextEnd,true);
+  }
   return <V21RowCard title={titleText||`일정 ${index+1}`} onDelete={total>1?onDelete:null}>
-    <div className="v229-schedule-main">
-      <div className="v229-schedule-time-row">
-        <V21Select label="일차" value={row.day} options={days} onChange={v=>onPatch('day',v,true)}/>
-        <V21TimeField label="시작" value={row.start} onChange={v=>onPatch('start',v,false)} onCommit={v=>onPatch('start',v,true)}/>
-        <V21TimeField label="종료" value={row.end} onChange={v=>onPatch('end',v,false)} onCommit={v=>onPatch('end',v,true)}/>
-        <V21IconSelect label="아이콘" value={row.icon} onChange={v=>onPatch('icon',v,false)}/>
+    <div className="v229-schedule-main v17-schedule-card">
+      <div className="v17-time-pick-box">
+        <div className="v17-time-pick-title"><b>시간 선택</b><span>직접 입력 대신 선택하면 시간순으로 자동 정리됩니다.</span></div>
+        <div className="v229-schedule-time-row">
+          <V21Select label="일차" value={row.day} options={days} onChange={v=>onPatch('day',v,true)}/>
+          <V21TimeSelect label="시작" value={row.start} options={timeOptions} placeholder="시작 선택" onChange={changeStart}/>
+          <V21TimeSelect label="종료" value={row.end} options={timeOptions} placeholder="종료 선택" onChange={changeEnd}/>
+          <V21IconSelect label="아이콘" value={row.icon} onChange={v=>onPatch('icon',v,false)}/>
+        </div>
       </div>
       <div className="v229-schedule-title-row">
         <V21MiniField label="일정명" value={row.title} placeholder="예: 저녁예배 1 / 공동체 미션" onChange={v=>onPatch('title',v,false)}/>
@@ -1657,9 +1716,11 @@ function V21ScheduleBlock({doc,setDoc}){
   useEffect(()=>{if(!days.includes(activeDay))setActiveDay(days[0]||'1일차')},[days.join('|')]);
   function setRows(next,sort=false){setDoc({...doc,scheduleItems:sort?sortScheduleRows(next,days,true):next})}
   function patch(i,k,v,commit=false){
-    const next=updateArray(rows,i,k,v);
-    const shouldSort=commit||k==='day';
-    setRows(next,shouldSort);
+    const isObjectPatch=typeof k==='object'&&k!==null;
+    const next=isObjectPatch?rows.map((row,idx)=>idx===i?{...row,...k}:row):updateArray(rows,i,k,v);
+    // 선택 직후 행 전체를 실제 배열에서 재정렬하면 드롭다운이 튀거나 값이 안 바뀐 것처럼 보일 수 있습니다.
+    // 실제 데이터 순서는 안정적으로 두고, 화면 표시만 시간순으로 정렬합니다.
+    setRows(next,false);
   }
   function add(day=activeDay){
     const target=day||days[0]||'1일차';
@@ -1670,7 +1731,7 @@ function V21ScheduleBlock({doc,setDoc}){
     setRows(next,false);
   }
   const visible=sortScheduleRows(rows.map((r,i)=>({...r,_i:i})),days,true).filter(r=>(r.day||days[0])===activeDay);
-  return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible v16-schedule-time-polish"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>일차 탭을 눌러 해당 날짜 일정만 수정합니다. 새 일정은 바로 보이고, 시간을 입력하면 시간순으로 정리됩니다.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b>{activeDay} 일정 수정</b><div><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div><p className="schedule-time-help">시간은 <b>13:30</b> 또는 <b>오후 1:30</b>처럼 입력하세요. 입력칸을 클릭하면 기존 시간이 전체 선택되어 남은 숫자 때문에 헷갈리지 않습니다.</p>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`${r._i}-${r.day}-${visibleIndex}`} row={r} index={r._i} days={days} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i),true)} onPatch={(k,v,commit)=>patch(r._i,k,v,commit)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>
+  return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible v16-schedule-time-polish v17-schedule-select-editor"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>일차 탭을 누르고, 시작/종료 시간을 선택하면 현재 편집판도 시간순으로 정리됩니다.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b>{activeDay} 일정 수정</b><div><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div><p className="schedule-time-help v17-schedule-time-help"><b>시간은 직접 쓰지 않고 선택합니다.</b> 새 일정을 추가한 뒤 시작 시간을 고르면 종료 시간은 기본 1시간 뒤로 자동 입력됩니다. 종료 시간이 시작보다 빠르면 자동으로 보정됩니다.</p>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`schedule-row-${r._i}`} row={r} index={r._i} days={days} doc={doc} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i),true)} onPatch={(k,v,commit)=>patch(r._i,k,v,commit)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>
 }
 function V21BudgetBlock({doc,setDoc}){const income=doc.incomeItems?.length?doc.incomeItems:[budgetRow()];const expense=doc.expenseItems?.length?doc.expenseItems:[budgetRow()];return <section className="v21-auto-block"><div className="v21-block-head"><div><b>수입·지출 자동 계산</b><span>수량×단가와 합계는 자동으로 계산되어 인쇄용 예산표에 반영됩니다.</span></div></div><div className="v21-budget-grid"><div><h4>수입 계획</h4><BudgetRowsTable rows={income} onChange={rows=>setDoc({...doc,incomeItems:rows})} addLabel="+ 수입 항목"/></div><div><h4>지출 계획</h4><BudgetRowsTable rows={expense} onChange={rows=>setDoc({...doc,expenseItems:rows})} addLabel="+ 지출 항목"/></div></div></section>}
 function V21PrepBlock({doc,setDoc}){const rows=doc.items?.length?doc.items:[prepRow('','','','','','물품')];function setRows(next){setDoc({...doc,items:next})}function patch(i,k,v){setRows(updateArray(rows,i,k,v))}return <section className="v21-auto-block"><div className="v21-block-head"><div><b>준비목록 체크리스트</b><span>물품·세팅·인력·행정 항목을 줄로 추가하면 A4 체크표로 정리됩니다.</span></div><button type="button" onClick={()=>setRows([...rows,prepRow('','','','','','물품')])}>+ 준비항목 추가</button></div>{rows.map((r,i)=><V21RowCard key={i} title={`준비항목 ${i+1}`} onDelete={rows.length>1?()=>setRows(rows.filter((_,idx)=>idx!==i)):null}><V21Select label="분류" value={r.category||'물품'} options={PREP_CATEGORIES} onChange={v=>patch(i,'category',v)}/><V21MiniField label="준비 항목" value={r.item} onChange={v=>patch(i,'item',v)}/><V21MiniField label="담당" value={r.owner} onChange={v=>patch(i,'owner',v)}/><V21MiniField label="기한" value={r.due} onChange={v=>patch(i,'due',v)}/><V21Select label="상태" value={r.status||'준비중'} options={['준비중','확인중','완료','보류']} onChange={v=>patch(i,'status',v)}/><V21MiniArea label="비고" value={r.note} onChange={v=>patch(i,'note',v)}/></V21RowCard>)}</section>}
@@ -1767,12 +1828,22 @@ function V28RowsBlock({tab,doc,setDoc}){
   return <section className="v23-tab-block v28-rows-block"><div className="v23-block-title"><b>{tab.title}</b><span>{safe.length}개 항목</span></div><div className="v28-rows-list">{safe.map((r,i)=><V21RowCard key={i} title={`${tab.rowLabel||'항목'} ${i+1}`} onDelete={safe.length>1?()=>setRows(safe.filter((_,idx)=>idx!==i)):null}>{(tab.columns||[]).map(col=>col.kind==='area'?<V21MiniArea key={col.key} label={col.label} value={r[col.key]||''} onChange={v=>patch(i,col.key,v)}/>:<V21MiniField key={col.key} label={col.label} value={r[col.key]||''} onChange={v=>patch(i,col.key,v)}/>)}</V21RowCard>)}</div><button type="button" className="btn secondary" onClick={()=>setRows([...safe,{...(tab.blank||{})}])}>+ {tab.rowLabel||'항목'} 추가</button></section>;
 }
 
+function WeeklyUnitNameField({value,onCommit,label='부서/팀명'}){
+  const [draft,setDraft]=useState(value||'');
+  useEffect(()=>{setDraft(value||'')},[value]);
+  function commit(){
+    const clean=String(draft||'').trim();
+    if(clean && clean!==value)onCommit(clean);
+    else setDraft(value||'');
+  }
+  return <label className="field weekly-unit-name-field"><span>{label}</span><input type="text" value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}} placeholder="예: 교육부 / 예배부 / 선교부" /></label>
+}
 function WeeklyUnitsBlock({doc,setDoc}){
   const units=weeklyUnits(doc);
   function setUnitName(oldName,newName){setDoc(renameWeeklyUnit(doc,oldName,newName))}
   function addUnit(){const name=nextWeeklyUnitName(units);setDoc({...doc,weeklyUnits:[...units,name],[`${name}_attendance`]:'',[`${name}_this`]:'',[`${name}_next`]:'',[`${name}_special`]:''})}
   function removeUnit(dep){if(units.length<2)return;const next={...doc,weeklyUnits:units.filter(x=>x!==dep)};['attendance','this','next','special'].forEach(k=>delete next[`${dep}_${k}`]);setDoc(next)}
-  return <section className="v23-tab-block weekly-unit-manager"><div className="v23-block-title"><b>부서별 주간 현황</b><span>교육부뿐 아니라 예배부·선교부·속회·소그룹 등 원하는 부서명으로 바꿀 수 있습니다.</span></div><div className="weekly-unit-list">{units.map(dep=><div className="dept-edit weekly-unit-edit" key={dep}><div className="weekly-unit-head"><Field label="부서/팀명" value={dep} onChange={v=>setUnitName(dep,v)}/>{units.length>1&&<button type="button" onClick={()=>removeUnit(dep)}>삭제</button>}</div><div className="grid4 weekly-unit-grid"><Field label="출석/참여(명)" type="number" value={childAttendanceValue(doc[`${dep}_attendance`])} onChange={v=>setDoc({...doc,[`${dep}_attendance`]:v})}/><Area label="이번 주 활동" value={doc[`${dep}_this`]} onChange={v=>setDoc({...doc,[`${dep}_this`]:v})}/><Area label="다음 주 계획" value={doc[`${dep}_next`]} onChange={v=>setDoc({...doc,[`${dep}_next`]:v})}/><Area label="특이사항" value={doc[`${dep}_special`]} onChange={v=>setDoc({...doc,[`${dep}_special`]:v})}/></div></div>)}</div><button type="button" className="btn secondary" onClick={addUnit}>+ 부서/팀 추가</button></section>
+  return <section className="v23-tab-block weekly-unit-manager"><div className="v23-block-title"><b>부서별 주간 현황</b><span>교육부뿐 아니라 예배부·선교부·속회·소그룹 등 원하는 부서명으로 바꿀 수 있습니다.</span></div><div className="weekly-unit-list">{units.map(dep=><div className="dept-edit weekly-unit-edit" key={dep}><div className="weekly-unit-head"><WeeklyUnitNameField value={dep} onCommit={v=>setUnitName(dep,v)}/>{units.length>1&&<button type="button" onClick={()=>removeUnit(dep)}>삭제</button>}</div><div className="grid4 weekly-unit-grid"><Field label="출석/참여(명)" type="number" value={childAttendanceValue(doc[`${dep}_attendance`])} onChange={v=>setDoc({...doc,[`${dep}_attendance`]:v})}/><Area label="이번 주 활동" value={doc[`${dep}_this`]} onChange={v=>setDoc({...doc,[`${dep}_this`]:v})}/><Area label="다음 주 계획" value={doc[`${dep}_next`]} onChange={v=>setDoc({...doc,[`${dep}_next`]:v})}/><Area label="특이사항" value={doc[`${dep}_special`]} onChange={v=>setDoc({...doc,[`${dep}_special`]:v})}/></div></div>)}</div><button type="button" className="btn secondary" onClick={addUnit}>+ 부서/팀 추가</button></section>
 }
 function V23TabContent({tab,doc,setDoc,onPatch}){
   if(tab.kind==='fields')return <><div className="v23-tab-intro"><b>{tab.title}</b><span>{tab.desc}</span></div><V23Fields fields={tab.fields||[]} doc={doc} onPatch={onPatch}/></>;
@@ -2353,7 +2424,7 @@ function renderEditor(type,d,setD){
   if(type==='기본 설정') return <><Box title="교회 기본 설정"><div className="grid3"><Field label="교회명" value={d.church} onChange={v=>setD({...d,church:v})}/><Select label="기본 부서/모임" value={d.defaultGroup} options={DEPARTMENTS} onChange={v=>setD({...d,defaultGroup:v})}/><Field label="담당자" value={d.manager} onChange={v=>setD({...d,manager:v})}/></div><Field label="문의 문구" value={d.contact} onChange={v=>setD({...d,contact:v})}/><Field label="하단 문구" value={d.footer} onChange={v=>setD({...d,footer:v})}/></Box></>;
   if(type==='각부 월간행사 안내') return <><Box title="기본 정보"><div className="grid3"><Select label="부서/모임" value={d.group} options={DEPARTMENTS} onChange={v=>setD({...d,group:v,title:`${v} ${d.month?.replace(/^\d{4}년\s*/,'')||'월간'} 행사 안내`})}/><Field label="제목" value={d.title} onChange={v=>setD({...d,title:v})}/><Field label="기간" value={d.month} onChange={v=>setD({...d,month:v})}/></div></Box><EventsEditor rows={d.events} onChange={v=>setD({...d,events:v})}/><DeptEditor rows={d.deptRows} onChange={v=>setD({...d,deptRows:v})}/><MonthlyLineEditor label="확인 및 협조 요청" value={d.requests} onChange={v=>setD({...d,requests:v})}/><MonthlyLineEditor label="기도 제목" value={d.prayers} onChange={v=>setD({...d,prayers:v})}/><Field label="하단 문구" value={d.footer} onChange={v=>setD({...d,footer:v})}/><Field label="문의" value={d.contact} onChange={v=>setD({...d,contact:v})}/></>;
   if(type==='주간 공지') return <><Box title="기본 정보"><div className="grid3"><Field label="제목" value={d.title} onChange={v=>setD({...d,title:v})}/><Field label="기간" value={d.period} onChange={v=>setD({...d,period:v})}/><Field label="대상" value={d.target} onChange={v=>setD({...d,target:v})}/></div></Box><EventsEditor rows={d.items} onChange={v=>setD({...d,items:v})}/><Area label={labelOf(d,1,'확인사항')} value={d.requests} onChange={v=>setD({...d,requests:v})}/><Area label={labelOf(d,2,'기도제목')} value={d.prayer} onChange={v=>setD({...d,prayer:v})}/></>;
-  if(type==='부서 통합 주간보고서'){const units=weeklyUnits(d);function setUnitName(oldName,newName){setD(renameWeeklyUnit(d,oldName,newName))}function addUnit(){const name=nextWeeklyUnitName(units);setD({...d,weeklyUnits:[...units,name],[`${name}_attendance`]:'',[`${name}_this`]:'',[`${name}_next`]:'',[`${name}_special`]:''})}function removeUnit(dep){if(units.length<2)return;const next={...d,weeklyUnits:units.filter(x=>x!==dep)};['attendance','this','next','special'].forEach(k=>delete next[`${dep}_${k}`]);setD(next)}return <><Box title="기본 정보"><div className="grid3"><Field label="제목" value={d.reportTitle} onChange={v=>setD({...d,reportTitle:v})}/><Field label="기간" value={d.period} onChange={v=>setD({...d,period:v})}/><Field label="작성자" value={d.writer} onChange={v=>setD({...d,writer:v})}/></div><Area label={labelOf(d,0,'전체 주간 활동 요약')} value={d.summary} onChange={v=>setD({...d,summary:v})}/></Box><Box title={labelOf(d,1,'부서별 주간 현황')}><p className="hint">부서명은 자유롭게 바꿀 수 있습니다. 교육부, 선교부, 예배부, 속회, 소그룹 등 필요한 이름으로 수정하세요.</p>{units.map(dep=><div className="dept-edit weekly-unit-edit" key={dep}><div className="weekly-unit-head"><Field label="부서명" value={dep} onChange={v=>setUnitName(dep,v)}/>{units.length>1&&<button type="button" onClick={()=>removeUnit(dep)}>삭제</button>}</div><div className="grid4"><Field label="출석/참여(명)" type="number" value={childAttendanceValue(d[`${dep}_attendance`])} onChange={v=>setD({...d,[`${dep}_attendance`]:v})}/><Field label="이번 주 활동" value={d[`${dep}_this`]} onChange={v=>setD({...d,[`${dep}_this`]:v})}/><Field label="다음 주 활동" value={d[`${dep}_next`]} onChange={v=>setD({...d,[`${dep}_next`]:v})}/><Field label="특이사항" value={d[`${dep}_special`]} onChange={v=>setD({...d,[`${dep}_special`]:v})}/></div></div>)}<button className="btn secondary" type="button" onClick={addUnit}>부서/팀 추가</button></Box><Area label={labelOf(d,2,'공동 기도제목')} value={d.commonPrayer} onChange={v=>setD({...d,commonPrayer:v})}/><Area label={labelOf(d,3,'공유/지원 요청')} value={d.support} onChange={v=>setD({...d,support:v})}/></>;}
+  if(type==='부서 통합 주간보고서'){const units=weeklyUnits(d);function setUnitName(oldName,newName){setD(renameWeeklyUnit(d,oldName,newName))}function addUnit(){const name=nextWeeklyUnitName(units);setD({...d,weeklyUnits:[...units,name],[`${name}_attendance`]:'',[`${name}_this`]:'',[`${name}_next`]:'',[`${name}_special`]:''})}function removeUnit(dep){if(units.length<2)return;const next={...d,weeklyUnits:units.filter(x=>x!==dep)};['attendance','this','next','special'].forEach(k=>delete next[`${dep}_${k}`]);setD(next)}return <><Box title="기본 정보"><div className="grid3"><Field label="제목" value={d.reportTitle} onChange={v=>setD({...d,reportTitle:v})}/><Field label="기간" value={d.period} onChange={v=>setD({...d,period:v})}/><Field label="작성자" value={d.writer} onChange={v=>setD({...d,writer:v})}/></div><Area label={labelOf(d,0,'전체 주간 활동 요약')} value={d.summary} onChange={v=>setD({...d,summary:v})}/></Box><Box title={labelOf(d,1,'부서별 주간 현황')}><p className="hint">부서명은 자유롭게 바꿀 수 있습니다. 교육부, 선교부, 예배부, 속회, 소그룹 등 필요한 이름으로 수정하세요.</p>{units.map(dep=><div className="dept-edit weekly-unit-edit" key={dep}><div className="weekly-unit-head"><WeeklyUnitNameField label="부서명" value={dep} onCommit={v=>setUnitName(dep,v)}/>{units.length>1&&<button type="button" onClick={()=>removeUnit(dep)}>삭제</button>}</div><div className="grid4"><Field label="출석/참여(명)" type="number" value={childAttendanceValue(d[`${dep}_attendance`])} onChange={v=>setD({...d,[`${dep}_attendance`]:v})}/><Field label="이번 주 활동" value={d[`${dep}_this`]} onChange={v=>setD({...d,[`${dep}_this`]:v})}/><Field label="다음 주 활동" value={d[`${dep}_next`]} onChange={v=>setD({...d,[`${dep}_next`]:v})}/><Field label="특이사항" value={d[`${dep}_special`]} onChange={v=>setD({...d,[`${dep}_special`]:v})}/></div></div>)}<button className="btn secondary" type="button" onClick={addUnit}>부서/팀 추가</button></Box><Area label={labelOf(d,2,'공동 기도제목')} value={d.commonPrayer} onChange={v=>setD({...d,commonPrayer:v})}/><Area label={labelOf(d,3,'공유/지원 요청')} value={d.support} onChange={v=>setD({...d,support:v})}/></>;}
   if(type==='부서별 주간보고서') return <><StaticBox title="기본 정보"><div className="grid4"><Field label="제목" value={d.reportTitle} onChange={v=>setD({...d,reportTitle:v})}/><Select label="부서" value={d.subDepartment} options={REPORT_DEPT_OPTIONS} onChange={v=>setD({...d,subDepartment:v,reportTitle:`${v} 주간보고서`})}/><Field label="기간" value={d.period} onChange={v=>setD({...d,period:v})}/><Field label="작성자" value={d.writer} onChange={v=>setD({...d,writer:v})}/></div><Field label="출석/참여(명)" type="number" value={childAttendanceValue(d.attendance)} onChange={v=>setD({...d,attendance:v})}/></StaticBox><Area label={labelOf(d,1,'이번 주 활동')} value={d.thisWeek} onChange={v=>setD({...d,thisWeek:v})}/><Area label={labelOf(d,2,'다음 주 계획')} value={d.nextWeek} onChange={v=>setD({...d,nextWeek:v})}/><Area label={labelOf(d,3,'특이사항 및 지원 요청')} value={d.special} onChange={v=>setD({...d,special:v})}/><Area label={labelOf(d,4,'기도제목')} value={d.prayer} onChange={v=>setD({...d,prayer:v})}/></>;
   if(type==='7개부서 보고서') return <><Box title="기본 정보"><div className="grid3"><Select label="부서" value={d.department} options={DEPARTMENTS.slice(0,7)} onChange={v=>setD({...d,department:v,reportTitle:`${v} 보고`})}/><Field label="기간" value={d.period} onChange={v=>setD({...d,period:v})}/><Field label="작성자" value={d.writer} onChange={v=>setD({...d,writer:v})}/></div><p className="hint">미리보기 제목은 선택한 부서명에 따라 자동으로 “선교부 보고”, “예배부 보고”처럼 표시됩니다.</p></Box><Area label={labelOf(d,0,'이번 주 주요 활동')} value={d.thisWeek} onChange={v=>setD({...d,thisWeek:v})}/><Area label={labelOf(d,1,'특이사항 및 요청사항')} value={d.special} onChange={v=>setD({...d,special:v})}/><Area label={labelOf(d,2,'다음 주 활동 계획')} value={d.nextWeek} onChange={v=>setD({...d,nextWeek:v})}/><Area label={labelOf(d,3,'기도제목')} value={d.prayer} onChange={v=>setD({...d,prayer:v})}/></>;
   if(type==='행사 및 수련회 기획안') return <>
@@ -2581,7 +2652,11 @@ function MonthlyPreview({doc}){
   const totalPages=pages.length+(extra.length?1:0);
   return <>{pages.map((p,i)=><MonthlyFlowPage key={i} doc={doc} {...p} pageNo={i+1} totalPages={totalPages}/>) }{extra.length?buildExtraPages('각부 월간행사 안내',doc,4,{className:'monthly-extra-page',pageNoStart:pages.length+1}):null}</>;
 }
-function WeeklyPreview({doc,type}){if(type==='부서 통합 주간보고서'){const units=weeklyUnits(doc);return buildGenericPages(type,doc,[{title:'전체 주간 활동 요약',body:<SplitText text={doc.summary} path="summary"/>},{title:'부서별 주간 현황',body:<Table heads={['부서','출석/참여','이번 주 활동','다음 주 활동','특이사항']} rows={units.map(dep=>[dep,<AttendanceNumber path={`${dep}_attendance`} value={doc[`${dep}_attendance`]}/>,ev(`${dep}_this`,doc[`${dep}_this`]),ev(`${dep}_next`,doc[`${dep}_next`]),ev(`${dep}_special`,doc[`${dep}_special`])])}/>},{title:'공동 기도제목',body:<PList text={doc.commonPrayer} path="commonPrayer"/>},{title:'공유/지원 요청',body:<PList text={doc.support} path="support"/>}]);}
+function WeeklyStatusTable({doc,units}){
+  const safe=Array.isArray(units)&&units.length?units:weeklyUnits(doc);
+  return <table className="doc-table weekly-status-table"><colgroup><col style={{width:'14%'}}/><col style={{width:'10%'}}/><col style={{width:'25%'}}/><col style={{width:'25%'}}/><col style={{width:'26%'}}/></colgroup><thead><tr>{['부서','출석/참여','이번 주 활동','다음 주 계획','특이사항'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{safe.map(dep=><tr key={dep}><td className="weekly-dept-name"><span>{dep}</span></td><td className="weekly-attendance"><AttendanceNumber path={`${dep}_attendance`} value={doc[`${dep}_attendance`]}/></td><td><div className="weekly-cell-wrap">{showValue(ev(`${dep}_this`,doc[`${dep}_this`]))}</div></td><td><div className="weekly-cell-wrap">{showValue(ev(`${dep}_next`,doc[`${dep}_next`]))}</div></td><td><div className="weekly-cell-wrap">{showValue(ev(`${dep}_special`,doc[`${dep}_special`]))}</div></td></tr>)}</tbody></table>
+}
+function WeeklyPreview({doc,type}){if(type==='부서 통합 주간보고서'){const units=weeklyUnits(doc);return buildGenericPages(type,doc,[{title:'전체 주간 활동 요약',body:<SplitText text={doc.summary} path="summary"/>},{title:'부서별 주간 현황',body:<WeeklyStatusTable doc={doc} units={units}/>},{title:'공동 기도제목',body:<PList text={doc.commonPrayer} path="commonPrayer"/>},{title:'공유/지원 요청',body:<PList text={doc.support} path="support"/>}]);}
  if(type==='부서별 주간보고서') return buildGenericPages(type,doc,[{title:'예배/모임 현황',body:<InfoGrid items={[["부서",ev("subDepartment",doc.subDepartment)],["출석/참여",<AttendanceNumber path="attendance" value={doc.attendance}/>],["기간",ev("period",doc.period)],["작성자",ev("writer",doc.writer)]]}/>},{title:'이번 주 활동',body:<SplitText text={doc.thisWeek} path="thisWeek"/>},{title:'다음 주 계획',body:<SplitText text={doc.nextWeek} path="nextWeek"/>},{title:'특이사항 및 지원 요청',body:<SplitText text={doc.special} path="special"/>},{title:'기도제목',body:<PList text={doc.prayer} path="prayer"/>}]);
  return buildGenericPages(type,doc,[{title:'이번 주 주요 활동',body:<SplitText text={doc.thisWeek} path="thisWeek"/>},{title:'특이사항 및 요청사항',body:<SplitText text={doc.special} path="special"/>},{title:'다음 주 활동 계획',body:<SplitText text={doc.nextWeek} path="nextWeek"/>},{title:'기도제목',body:<PList text={doc.prayer} path="prayer"/>}]);}
 function EventPlanPreview({doc}){return buildGenericPages('행사 기획안',doc,[
@@ -3324,9 +3399,9 @@ function AppShell(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
-      <div className="brand"><b>교회문서키트</b><span>BASIC 1.6 작성기</span></div>
+      <div className="brand"><b>교회문서키트</b><span>BASIC 1.8 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
       {CATEGORIES.map(cat=><div className="menu-group" key={cat.name}><h4>{cat.name}</h4>{cat.types.map(t=><DocMenuItem key={t} t={t} type={type} setType={setType} selected={bundleTypes} onToggle={toggleBundle} setSelected={setBundleTypes}/>)}</div>)}
     </aside>
