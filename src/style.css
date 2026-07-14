@@ -11355,3 +11355,18 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 @media(max-width:760px){
   .v-basic-1-4-complete-set .weekly-unit-head{grid-template-columns:1fr;}
 }
+
+/* BASIC 1.5: 일정표 일차 추가/부서 통합 주간보고서 사용성 개선 */
+.v-basic-1-5-schedule-dept-polish .v15-day-manager{border:1px solid #dbeafe!important;background:#f8fbff!important;}
+.v-basic-1-5-schedule-dept-polish .v25-day-manage-row{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:10px 0 12px;padding:12px 14px;border:1px solid #dbeafe;background:#fff;border-radius:16px;}
+.v-basic-1-5-schedule-dept-polish .v25-day-manage-row b{display:block;color:#0f172a;font-size:14px;}
+.v-basic-1-5-schedule-dept-polish .v25-day-manage-row span{display:block;color:#64748b;font-size:12px;line-height:1.4;margin-top:3px;}
+.v-basic-1-5-schedule-dept-polish .v25-day-manage-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.v-basic-1-5-schedule-dept-polish .v15-schedule-add-visible .schedule-day-toolbar{position:sticky;top:0;z-index:2;background:#fff;border:1px solid #dbeafe;border-radius:14px;padding:10px 12px;margin:8px 0 10px;box-shadow:0 8px 20px rgba(15,23,42,.06);}
+.v-basic-1-5-schedule-dept-polish .v15-schedule-add-visible .schedule-card-list .v21-row-card:first-child{border-color:#93c5fd!important;box-shadow:0 10px 24px rgba(37,99,235,.10)!important;}
+.v-basic-1-5-schedule-dept-polish .weekly-unit-manager{background:#fff;border:1px solid #dbeafe;border-radius:18px;padding:14px;}
+.v-basic-1-5-schedule-dept-polish .weekly-unit-list{display:grid;gap:12px;margin:12px 0;}
+.v-basic-1-5-schedule-dept-polish .weekly-unit-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:10px;}
+.v-basic-1-5-schedule-dept-polish .weekly-unit-head button{border:1px solid #fecdd3;background:#fff1f2;color:#be123c;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;}
+.v-basic-1-5-schedule-dept-polish .weekly-unit-grid textarea{min-height:74px;}
+@media(max-width:900px){.v-basic-1-5-schedule-dept-polish .v25-day-manage-row{display:block}.v-basic-1-5-schedule-dept-polish .v25-day-manage-actions{justify-content:flex-start;margin-top:10px}.v-basic-1-5-schedule-dept-polish .weekly-unit-head{grid-template-columns:1fr}.v-basic-1-5-schedule-dept-polish .weekly-unit-grid{grid-template-columns:1fr!important}}
