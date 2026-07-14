@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.3 편의성 정리판: 작성기 주소 복사 + 임시 로그인 링크 안내
+// BASIC 1.6 일정표 입력 개선판: 일정 시간순 정렬 + 쉬운 시간 입력
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
@@ -265,7 +265,7 @@ function AuthGate({children}){
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.5 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 1.6 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
   return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>개인 PC는 창만 닫으세요</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 다음 접속 시 이메일 링크 인증이 다시 필요합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{children}</>;
 }
 
@@ -929,11 +929,39 @@ function parseScheduleRow(line,day='1일차'){
 }
 function normalizeTimeText(text){
   const raw=String(text||'').trim();
-  const ap=raw.includes('오후')?'pm':raw.includes('오전')?'am':'';
-  const m=raw.match(/(\d{1,2})(?::(\d{2}))?/); if(!m)return raw;
-  let h=Number(m[1]); const min=m[2]||'00';
-  if(ap==='pm'&&h<12)h+=12; if(ap==='am'&&h===12)h=0;
-  return `${String(h).padStart(2,'0')}:${min}`;
+  if(!raw)return '';
+  const compact=raw.replace(/\s+/g,' ').replace(/[.]/g,':');
+  const ap=/오후|PM/i.test(compact)?'pm':/오전|AM/i.test(compact)?'am':'';
+  let m=compact.match(/(\d{1,2})\s*시\s*(\d{1,2})?\s*분?/);
+  if(!m)m=compact.match(/(\d{1,2})\s*[:：]\s*(\d{1,2})/);
+  if(!m)m=compact.match(/^(?:오전|오후|AM|PM)?\s*(\d{1,2})\s*$/i);
+  if(!m)return raw;
+  let h=Number(m[1]);
+  let min=Number(m[2]||0);
+  if(!Number.isFinite(h)||!Number.isFinite(min)||h>24||min>59)return raw;
+  if(ap==='pm'&&h<12)h+=12;
+  if(ap==='am'&&h===12)h=0;
+  if(h===24)h=0;
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
+function scheduleSortKey(value,blankFirst=false){
+  if(!String(value||'').trim())return blankFirst?-1:99999;
+  const normalized=normalizeTimeText(value);
+  const m=String(normalized||'').match(/^(\d{1,2}):(\d{2})$/);
+  if(!m)return blankFirst?99998:99999;
+  return Math.max(0,Math.min(23,Number(m[1])||0))*60+Math.max(0,Math.min(59,Number(m[2])||0));
+}
+function sortScheduleRows(rows=[],days=[],blankFirst=false){
+  const order=Object.fromEntries((days||[]).map((d,i)=>[d,i]));
+  return [...(rows||[])].map((r,i)=>({...r,__sortIndex:i})).sort((a,b)=>{
+    const da=order[a.day]??999; const db=order[b.day]??999;
+    if(da!==db)return da-db;
+    const sa=scheduleSortKey(a.start,blankFirst); const sb=scheduleSortKey(b.start,blankFirst);
+    if(sa!==sb)return sa-sb;
+    const ea=scheduleSortKey(a.end,false); const eb=scheduleSortKey(b.end,false);
+    if(ea!==eb)return ea-eb;
+    return a.__sortIndex-b.__sortIndex;
+  }).map(({__sortIndex,...r})=>r);
 }
 function addMinutes(t,mins){const [h,m]=String(t||'09:00').split(':').map(Number);const d=new Date(2000,0,1,h||9,m||0);d.setMinutes(d.getMinutes()+mins);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
 function timeToMin(t){const normalized=normalizeTimeText(t);const m=String(normalized||'').match(/^(\d{1,2}):(\d{2})$/);if(!m)return 0;const h=Math.max(0,Math.min(23,Number(m[1])||0));const min=Math.max(0,Math.min(59,Number(m[2])||0));return h*60+min}
@@ -1511,6 +1539,10 @@ function V2QuickAddButtons({type,doc,setDoc}){
 
 function rowValue(row,key){return row?.[key]??''}
 function V21MiniField({label,value,onChange,type='text',wide=false,placeholder=''}){return <label className={wide?'v21-mini-field wide':'v21-mini-field'}><span>{label}</span><input type={type} value={value||''} placeholder={placeholder} onChange={e=>onChange(e.target.value)} /></label>}
+function V21TimeField({label,value,onChange,onCommit}){
+  function commit(v){const normalized=normalizeTimeText(v);(onCommit||onChange)(normalized||v)}
+  return <label className="v21-mini-field v21-time-field"><span>{label}</span><input type="text" inputMode="numeric" value={value||''} placeholder="예: 13:30 / 오후 1:30" onFocus={e=>e.target.select()} onChange={e=>onChange(e.target.value)} onBlur={e=>commit(e.target.value)} /><small>클릭하면 전체 선택됩니다. 오후 1:30처럼 입력해도 13:30으로 정리됩니다.</small></label>
+}
 function V21MiniArea({label,value,onChange,placeholder=''}){return <label className="v21-mini-field wide"><span>{label}</span><textarea value={value||''} placeholder={placeholder} onChange={e=>onChange(e.target.value)} /></label>}
 function V21Select({label,value,onChange,options}){return <label className="v21-mini-field"><span>{label}</span><select value={value||options?.[0]||''} onChange={e=>onChange(e.target.value)}>{(options||[]).map(o=><option key={o}>{o}</option>)}</select></label>}
 function V21IconSelect({label='아이콘',value,onChange}){return <label className="v21-mini-field v21-icon-field"><span>{label}</span><select value={value||''} onChange={e=>onChange(e.target.value)}><option value="">없음</option>{ICON_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}</select></label>}
@@ -1576,9 +1608,9 @@ function V25ScheduleSetup({doc,setDoc,activeDay,setActiveDay}){
     setDoc({...doc,schedulePreset:`${nextDays.length-1}박 ${nextDays.length}일`,days:nextDays,scheduleItems:nextRows});
   }
   return <section className="v25-schedule-setup v15-day-manager">
-    <div className="v25-page-card-title"><b>일정표 설정</b><span>당일·1박2일·2박3일은 물론 3박4일 이상도 “일차 추가”로 쉽게 늘릴 수 있습니다.</span></div>
+    <div className="v25-page-card-title"><b>일정표 설정</b><span>기본 선택은 3박4일까지 보이고, 그 이상은 “일차 추가”로 늘립니다.</span></div>
     <div className="v25-schedule-preset-row">
-      {['당일 행사','1박 2일','2박 3일','3박 4일','4박 5일','5박 6일'].map(x=><button type="button" key={x} className={preset===x?'active':''} onClick={()=>applyPreset(x)}>{x}</button>)}
+      {['당일 행사','1박 2일','2박 3일','3박 4일'].map(x=><button type="button" key={x} className={preset===x?'active':''} onClick={()=>applyPreset(x)}>{x}</button>)}
     </div>
     <div className="v25-day-manage-row">
       <div><b>현재 구성</b><span>{days.length}일 일정 · {days.join(' / ')}</span></div>
@@ -1596,27 +1628,50 @@ function V25ScheduleSetup({doc,setDoc,activeDay,setActiveDay}){
   </section>
 }
 function V229ScheduleRowEditor({row,index,days,onPatch,onDelete,total}){
-  const titleText=[row.day,row.start&&row.end?`${row.start}-${row.end}`:row.start,row.title].filter(Boolean).join(' · ');
+  const normalizedStart=normalizeTimeText(row.start||'');
+  const normalizedEnd=normalizeTimeText(row.end||'');
+  const titleText=[row.day,normalizedStart&&normalizedEnd?`${normalizedStart}-${normalizedEnd}`:normalizedStart,row.title].filter(Boolean).join(' · ');
   return <V21RowCard title={titleText||`일정 ${index+1}`} onDelete={total>1?onDelete:null}>
     <div className="v229-schedule-main">
       <div className="v229-schedule-time-row">
-        <V21Select label="일차" value={row.day} options={days} onChange={v=>onPatch('day',v)}/>
-        <V21MiniField label="시작" value={row.start} onChange={v=>onPatch('start',v)} type="time"/>
-        <V21MiniField label="종료" value={row.end} onChange={v=>onPatch('end',v)} type="time"/>
-        <V21IconSelect label="아이콘" value={row.icon} onChange={v=>onPatch('icon',v)}/>
+        <V21Select label="일차" value={row.day} options={days} onChange={v=>onPatch('day',v,true)}/>
+        <V21TimeField label="시작" value={row.start} onChange={v=>onPatch('start',v,false)} onCommit={v=>onPatch('start',v,true)}/>
+        <V21TimeField label="종료" value={row.end} onChange={v=>onPatch('end',v,false)} onCommit={v=>onPatch('end',v,true)}/>
+        <V21IconSelect label="아이콘" value={row.icon} onChange={v=>onPatch('icon',v,false)}/>
       </div>
       <div className="v229-schedule-title-row">
-        <V21MiniField label="일정명" value={row.title} placeholder="예: 저녁예배 1 / 공동체 미션" onChange={v=>onPatch('title',v)}/>
-        <V21MiniField label="장소" value={row.place} placeholder="예: 본당 / 세미나실 / 식당" onChange={v=>onPatch('place',v)}/>
+        <V21MiniField label="일정명" value={row.title} placeholder="예: 저녁예배 1 / 공동체 미션" onChange={v=>onPatch('title',v,false)}/>
+        <V21MiniField label="장소" value={row.place} placeholder="예: 본당 / 세미나실 / 식당" onChange={v=>onPatch('place',v,false)}/>
       </div>
       <details className="v229-schedule-extra">
         <summary>담당/메모 더보기</summary>
-        <V21MiniArea label="담당/메모" value={row.memo} placeholder="예: 찬양팀 준비, 이동 안내, 담당 교사 등" onChange={v=>onPatch('memo',v)}/>
+        <V21MiniArea label="담당/메모" value={row.memo} placeholder="예: 찬양팀 준비, 이동 안내, 담당 교사 등" onChange={v=>onPatch('memo',v,false)}/>
       </details>
     </div>
   </V21RowCard>
 }
-function V21ScheduleBlock({doc,setDoc}){const rows=doc.scheduleItems?.length?doc.scheduleItems:[schedRow(doc.days?.[0]||'1일차')];const days=doc.days?.length?doc.days:['1일차'];const [activeDay,setActiveDay]=useState(days[0]||'1일차');useEffect(()=>{if(!days.includes(activeDay))setActiveDay(days[0]||'1일차')},[days.join('|')]);function setRows(next){setDoc({...doc,scheduleItems:next})}function patch(i,k,v){setRows(updateArray(rows,i,k,v))}function add(day=activeDay){const target=day||days[0]||'1일차';const firstIndex=rows.findIndex(r=>(r.day||days[0])===target);const nextRow={...schedRow(target),start:'',end:'',title:'',place:'',memo:''};const next=firstIndex>=0?[...rows.slice(0,firstIndex),nextRow,...rows.slice(firstIndex)]:[nextRow,...rows];setActiveDay(target);setRows(next)}const visible=rows.map((r,i)=>({...r,_i:i})).filter(r=>(r.day||days[0])===activeDay);return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>일차 탭을 눌러 해당 날짜 일정만 수정합니다. “현재 일차에 추가”를 누르면 새 입력칸이 맨 위에 바로 보입니다.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b>{activeDay} 일정 수정</b><div><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`${r._i}-${r.day}-${visibleIndex}`} row={r} index={r._i} days={days} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i))} onPatch={(k,v)=>patch(r._i,k,v)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>}
+function V21ScheduleBlock({doc,setDoc}){
+  const rows=doc.scheduleItems?.length?doc.scheduleItems:[schedRow(doc.days?.[0]||'1일차')];
+  const days=doc.days?.length?doc.days:['1일차'];
+  const [activeDay,setActiveDay]=useState(days[0]||'1일차');
+  useEffect(()=>{if(!days.includes(activeDay))setActiveDay(days[0]||'1일차')},[days.join('|')]);
+  function setRows(next,sort=false){setDoc({...doc,scheduleItems:sort?sortScheduleRows(next,days,true):next})}
+  function patch(i,k,v,commit=false){
+    const next=updateArray(rows,i,k,v);
+    const shouldSort=commit||k==='day';
+    setRows(next,shouldSort);
+  }
+  function add(day=activeDay){
+    const target=day||days[0]||'1일차';
+    const firstIndex=rows.findIndex(r=>(r.day||days[0])===target);
+    const nextRow={...schedRow(target),start:'',end:'',title:'',place:'',memo:''};
+    const next=firstIndex>=0?[...rows.slice(0,firstIndex),nextRow,...rows.slice(firstIndex)]:[nextRow,...rows];
+    setActiveDay(target);
+    setRows(next,false);
+  }
+  const visible=sortScheduleRows(rows.map((r,i)=>({...r,_i:i})),days,true).filter(r=>(r.day||days[0])===activeDay);
+  return <section className="v21-auto-block v25-page-schedule-editor v229-schedule-editor schedule-day-editor-clear v15-schedule-add-visible v16-schedule-time-polish"><V25ScheduleSetup doc={doc} setDoc={setDoc} activeDay={activeDay} setActiveDay={setActiveDay}/><div className="v21-block-head"><div><b>상세 일정표</b><span>일차 탭을 눌러 해당 날짜 일정만 수정합니다. 새 일정은 바로 보이고, 시간을 입력하면 시간순으로 정리됩니다.</span></div><button type="button" onClick={()=>add(activeDay)}>+ {activeDay} 일정 추가</button></div><div className="schedule-day-tabs schedule-day-tabs-strong">{days.map(day=>{const count=rows.filter(r=>(r.day||days[0])===day).length;return <button type="button" key={day} className={activeDay===day?'active':''} onClick={()=>setActiveDay(day)}><span>{day}</span><small>{count}개</small></button>})}</div><div className="schedule-day-toolbar"><b>{activeDay} 일정 수정</b><div><button type="button" className="btn secondary" onClick={()=>add(activeDay)}>+ 현재 일차에 추가</button></div></div><p className="schedule-time-help">시간은 <b>13:30</b> 또는 <b>오후 1:30</b>처럼 입력하세요. 입력칸을 클릭하면 기존 시간이 전체 선택되어 남은 숫자 때문에 헷갈리지 않습니다.</p>{visible.length?<div className="schedule-card-list">{visible.map((r,visibleIndex)=><V229ScheduleRowEditor key={`${r._i}-${r.day}-${visibleIndex}`} row={r} index={r._i} days={days} total={rows.length} onDelete={()=>setRows(rows.filter((_,idx)=>idx!==r._i),true)} onPatch={(k,v,commit)=>patch(r._i,k,v,commit)}/>)}</div>:<div className="empty-day-schedule"><b>{activeDay} 일정이 없습니다.</b><span>위의 “현재 일차에 추가” 버튼을 누르면 새 입력칸이 바로 위쪽에 생깁니다.</span></div>}</section>
+}
 function V21BudgetBlock({doc,setDoc}){const income=doc.incomeItems?.length?doc.incomeItems:[budgetRow()];const expense=doc.expenseItems?.length?doc.expenseItems:[budgetRow()];return <section className="v21-auto-block"><div className="v21-block-head"><div><b>수입·지출 자동 계산</b><span>수량×단가와 합계는 자동으로 계산되어 인쇄용 예산표에 반영됩니다.</span></div></div><div className="v21-budget-grid"><div><h4>수입 계획</h4><BudgetRowsTable rows={income} onChange={rows=>setDoc({...doc,incomeItems:rows})} addLabel="+ 수입 항목"/></div><div><h4>지출 계획</h4><BudgetRowsTable rows={expense} onChange={rows=>setDoc({...doc,expenseItems:rows})} addLabel="+ 지출 항목"/></div></div></section>}
 function V21PrepBlock({doc,setDoc}){const rows=doc.items?.length?doc.items:[prepRow('','','','','','물품')];function setRows(next){setDoc({...doc,items:next})}function patch(i,k,v){setRows(updateArray(rows,i,k,v))}return <section className="v21-auto-block"><div className="v21-block-head"><div><b>준비목록 체크리스트</b><span>물품·세팅·인력·행정 항목을 줄로 추가하면 A4 체크표로 정리됩니다.</span></div><button type="button" onClick={()=>setRows([...rows,prepRow('','','','','','물품')])}>+ 준비항목 추가</button></div>{rows.map((r,i)=><V21RowCard key={i} title={`준비항목 ${i+1}`} onDelete={rows.length>1?()=>setRows(rows.filter((_,idx)=>idx!==i)):null}><V21Select label="분류" value={r.category||'물품'} options={PREP_CATEGORIES} onChange={v=>patch(i,'category',v)}/><V21MiniField label="준비 항목" value={r.item} onChange={v=>patch(i,'item',v)}/><V21MiniField label="담당" value={r.owner} onChange={v=>patch(i,'owner',v)}/><V21MiniField label="기한" value={r.due} onChange={v=>patch(i,'due',v)}/><V21Select label="상태" value={r.status||'준비중'} options={['준비중','확인중','완료','보류']} onChange={v=>patch(i,'status',v)}/><V21MiniArea label="비고" value={r.note} onChange={v=>patch(i,'note',v)}/></V21RowCard>)}</section>}
 function V21CueBlock({doc,setDoc}){const rows=doc.rows?.length?doc.rows:[cueRow()];function setRows(next){setDoc({...doc,rows:next})}function patch(i,k,v){setRows(updateArray(rows,i,k,v))}return <section className="v21-auto-block"><div className="v21-block-head"><div><b>큐시트 진행순서</b><span>시간, 순서, 담당을 추가하면 A4 가로 큐시트로 자동 정리됩니다.</span></div><button type="button" onClick={()=>setRows([...rows,cueRow()])}>+ 진행순서 추가</button></div>{rows.map((r,i)=><V21RowCard key={i} title={`순서 ${i+1}`} onDelete={rows.length>1?()=>setRows(rows.filter((_,idx)=>idx!==i)):null}><V21MiniField label="시간" value={r.time} onChange={v=>patch(i,'time',v)}/><V21MiniField label="순서/항목" value={r.part} onChange={v=>patch(i,'part',v)}/><V21MiniField label="내용" value={r.content} onChange={v=>patch(i,'content',v)}/><V21MiniField label="담당" value={r.person} onChange={v=>patch(i,'person',v)}/><V21MiniField label="방송/음향" value={r.tech} onChange={v=>patch(i,'tech',v)}/><V21MiniArea label="비고" value={r.note} onChange={v=>patch(i,'note',v)}/></V21RowCard>)}</section>}
@@ -3269,9 +3324,9 @@ function AppShell(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
-      <div className="brand"><b>교회문서키트</b><span>BASIC 1.5 작성기</span></div>
+      <div className="brand"><b>교회문서키트</b><span>BASIC 1.6 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
       {CATEGORIES.map(cat=><div className="menu-group" key={cat.name}><h4>{cat.name}</h4>{cat.types.map(t=><DocMenuItem key={t} t={t} type={type} setType={setType} selected={bundleTypes} onToggle={toggleBundle} setSelected={setBundleTypes}/>)}</div>)}
     </aside>

@@ -11370,3 +11370,24 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 .v-basic-1-5-schedule-dept-polish .weekly-unit-head button{border:1px solid #fecdd3;background:#fff1f2;color:#be123c;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;}
 .v-basic-1-5-schedule-dept-polish .weekly-unit-grid textarea{min-height:74px;}
 @media(max-width:900px){.v-basic-1-5-schedule-dept-polish .v25-day-manage-row{display:block}.v-basic-1-5-schedule-dept-polish .v25-day-manage-actions{justify-content:flex-start;margin-top:10px}.v-basic-1-5-schedule-dept-polish .weekly-unit-head{grid-template-columns:1fr}.v-basic-1-5-schedule-dept-polish .weekly-unit-grid{grid-template-columns:1fr!important}}
+
+/* BASIC 1.6 일정표 시간 입력 개선 */
+.v16-schedule-time-polish .schedule-time-help{
+  margin:8px 0 10px!important;
+  padding:9px 11px!important;
+  border:1px solid #dbeafe!important;
+  background:#eff6ff!important;
+  color:#1e3a8a!important;
+  border-radius:12px!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+.v16-schedule-time-polish .v21-time-field small{
+  display:block!important;
+  margin-top:2px!important;
+  font-size:10.5px!important;
+  line-height:1.35!important;
+  color:#64748b!important;
+}
+.v16-schedule-time-polish .v21-time-field input::placeholder{color:#94a3b8!important;}
+.v16-schedule-time-polish .schedule-card-list .v21-row-card{transition:background .15s ease, border-color .15s ease;}
