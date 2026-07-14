@@ -11499,3 +11499,102 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   overflow-wrap:anywhere!important;
   line-height:1.28!important;
 }
+
+
+/* BASIC 1.9: 문서 편집판 레이아웃 안정화
+   - 부서별 현황 제목/설명이 세로로 쪼개지지 않게 정리
+   - 일정표 시간 선택칸이 오른쪽으로 잘리지 않게 2열 고정 및 말줄임 처리 */
+.v-basic-1-9-editor-layout-fix .weekly-unit-manager .v23-block-title{
+  display:block!important;
+  padding:14px 16px!important;
+  margin-bottom:14px!important;
+  border:1px solid #dbeafe!important;
+  border-radius:16px!important;
+  background:#f8fbff!important;
+}
+.v-basic-1-9-editor-layout-fix .weekly-unit-manager .v23-block-title b{
+  display:block!important;
+  width:100%!important;
+  font-size:15px!important;
+  line-height:1.25!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  color:#0f172a!important;
+  margin-bottom:6px!important;
+}
+.v-basic-1-9-editor-layout-fix .weekly-unit-manager .v23-block-title span{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  font-size:12.5px!important;
+  line-height:1.55!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:break-word!important;
+  text-align:left!important;
+  color:#64748b!important;
+}
+.v-basic-1-9-editor-layout-fix .weekly-unit-manager,
+.v-basic-1-9-editor-layout-fix .weekly-unit-list,
+.v-basic-1-9-editor-layout-fix .weekly-unit-edit,
+.v-basic-1-9-editor-layout-fix .weekly-unit-grid{
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:hidden!important;
+}
+.v-basic-1-9-editor-layout-fix .weekly-unit-grid{
+  grid-template-columns:1fr!important;
+}
+.v-basic-1-9-editor-layout-fix .weekly-unit-grid .field,
+.v-basic-1-9-editor-layout-fix .weekly-unit-grid input,
+.v-basic-1-9-editor-layout-fix .weekly-unit-grid textarea{
+  max-width:100%!important;
+  min-width:0!important;
+}
+.v-basic-1-9-editor-layout-fix .v17-time-pick-box{
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+.v-basic-1-9-editor-layout-fix .v17-time-pick-title{
+  display:block!important;
+}
+.v-basic-1-9-editor-layout-fix .v17-time-pick-title span{
+  display:block!important;
+  margin-top:4px!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  line-height:1.45!important;
+}
+.v-basic-1-9-editor-layout-fix .v229-schedule-time-row{
+  width:100%!important;
+  max-width:100%!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:end!important;
+  overflow:hidden!important;
+}
+.v-basic-1-9-editor-layout-fix .v229-schedule-time-row .v21-mini-field,
+.v-basic-1-9-editor-layout-fix .v229-schedule-time-row .v21-mini-field select{
+  min-width:0!important;
+  max-width:100%!important;
+}
+.v-basic-1-9-editor-layout-fix .v229-schedule-time-row .v21-mini-field select{
+  font-size:13px!important;
+  font-weight:850!important;
+  padding:9px 8px!important;
+  text-overflow:ellipsis!important;
+}
+.v-basic-1-9-editor-layout-fix .v21-row-card-head{
+  min-width:0!important;
+}
+.v-basic-1-9-editor-layout-fix .v21-row-card-head b{
+  display:block!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+@media(max-width:640px){
+  .v-basic-1-9-editor-layout-fix .v229-schedule-time-row{grid-template-columns:1fr!important;}
+}
