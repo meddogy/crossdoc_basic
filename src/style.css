@@ -12035,3 +12035,50 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 .v-basic-1-13-final-polish .page.font-auto-fit .weekly-status-table{
   font-size:calc(var(--tableSize,13px) * .9)!important;
 }
+
+
+/* BASIC 1.14: 일정표 시간 열 가독성 보강 */
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable tbody th,
+.v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable tbody th{
+  width:72px!important;
+  min-width:72px!important;
+  font-size:calc(11.8px * var(--scheduleTextScale,1))!important;
+  line-height:1.15!important;
+  font-weight:950!important;
+  letter-spacing:-.02em!important;
+  color:#0f172a!important;
+  background:#f8fafc!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+  padding:2px 4px!important;
+}
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable thead th:first-child,
+.v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable thead th:first-child{
+  width:72px!important;
+  min-width:72px!important;
+  font-size:calc(11.3px * var(--scheduleTextScale,1))!important;
+  letter-spacing:-.02em!important;
+}
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable td,
+.v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable td{
+  height:max(var(--scheduleRowH,18px),20px)!important;
+  min-height:max(var(--scheduleRowH,18px),20px)!important;
+}
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .schedule-tight-grid,
+.v-basic-1-14-schedule-time-readable .schedule-page .schedule-tight-grid{
+  max-height:842px!important;
+}
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable,
+.v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable{
+  font-size:calc(10.4px * var(--scheduleTextScale,1))!important;
+}
+.v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable .simple-schedule-event b,
+.v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable .simple-schedule-event b{
+  font-size:calc(9.4px * var(--scheduleTextScale,1))!important;
+}
+@media print{
+  .v-basic-1-14-schedule-time-readable .event-retreat-schedule-page .simple-timetable tbody th,
+  .v-basic-1-14-schedule-time-readable .schedule-page .simple-timetable tbody th{
+    font-size:11.2px!important;
+  }
+}
