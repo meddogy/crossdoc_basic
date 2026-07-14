@@ -11778,3 +11778,75 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   overflow-wrap:anywhere!important;
   white-space:normal!important;
 }
+
+/* BASIC 1.12 최종 편의성 보강판 */
+.v-basic-1-12-usability-final .schedule-day-toolbar>div{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  justify-content:flex-end!important;
+}
+.v-basic-1-12-usability-final .schedule-day-toolbar .btn:not(.secondary){
+  border:1px solid #bfdbfe!important;
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+}
+.v-basic-1-12-usability-final .weekly-unit-name-field input::placeholder{
+  color:#94a3b8!important;
+}
+.v-basic-1-12-usability-final .budget-collapsible-card{
+  padding:0!important;
+  overflow:hidden!important;
+}
+.v-basic-1-12-usability-final .budget-collapsible-card>summary{
+  list-style:none!important;
+  cursor:pointer!important;
+  margin:0!important;
+  padding:10px 12px!important;
+  grid-template-columns:minmax(92px,1fr) minmax(0,1.6fr) auto!important;
+  border-bottom:1px solid transparent!important;
+}
+.v-basic-1-12-usability-final .budget-collapsible-card>summary::-webkit-details-marker{display:none!important;}
+.v-basic-1-12-usability-final .budget-collapsible-card>summary:before{
+  content:'▸';
+  color:#64748b;
+  font-weight:900;
+  margin-right:2px;
+}
+.v-basic-1-12-usability-final .budget-collapsible-card[open]>summary:before{content:'▾';}
+.v-basic-1-12-usability-final .budget-collapsible-card>summary span{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  color:#64748b!important;
+  font-size:12px!important;
+  font-weight:700!important;
+}
+.v-basic-1-12-usability-final .budget-collapsible-card[open]>summary{
+  border-bottom-color:#e2e8f0!important;
+  background:#f8fafc!important;
+}
+.v-basic-1-12-usability-final .budget-card-body-fields{
+  padding:10px!important;
+}
+.v-basic-1-12-usability-final .budget-row-delete{
+  display:flex!important;
+  justify-content:flex-end!important;
+  margin-bottom:8px!important;
+}
+.v-basic-1-12-usability-final .budget-row-delete button{
+  border:1px solid #fecaca!important;
+  background:#fff!important;
+  color:#dc2626!important;
+  border-radius:999px!important;
+  padding:6px 10px!important;
+  font-weight:900!important;
+  font-size:11px!important;
+}
+@media (max-width:760px){
+  .v-basic-1-12-usability-final .budget-collapsible-card>summary{
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+  .v-basic-1-12-usability-final .budget-collapsible-card>summary span{display:none!important;}
+}
