@@ -13149,3 +13149,16 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 .v-basic-1-28-attendance-free-text .field input[type=number][data-attendance-field]{
   -moz-appearance:textfield;
 }
+
+/* BASIC 1.29: 기본 공지 안내문은 모바일에서 완결 가능하다는 안내로 갱신 (기존 "초안만" 문구를 덮어씀) */
+@media(max-width:900px){
+  .mobile-notice-complete .mobile-notice span::after{
+    content:''!important;
+  }
+  .mobile-notice-complete .mobile-mode-bar span{
+    font-size:11px!important;
+  }
+  .mobile-notice-complete .mobile-mode-bar span::after{
+    content:''!important;
+  }
+}
