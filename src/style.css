@@ -12565,3 +12565,15 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   .dash-small-grid{grid-template-columns:1fr;}
   .back-dashboard-btn{padding:9px 11px;}
 }
+
+/* BASIC 1.23 대시보드 메뉴 실제 화면 보강 */
+.dash-info-box{margin-top:18px;border:1px dashed #c8d7e7;background:#f8fbff;border-radius:18px;padding:18px;color:#334155;line-height:1.6;font-weight:700;}
+.dash-info-box b{display:block;color:#0b2d5c;margin-bottom:6px;font-size:16px;}
+.dash-info-box p{margin:0;color:#53627a;}
+.dash-setting-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.dash-setting-grid article{border:1px solid #e2e8f0;background:#fff;border-radius:20px;padding:18px;box-shadow:0 10px 22px rgba(30,48,70,.05);}
+.dash-setting-grid h3{margin:0 0 10px;color:#0f2343;font-size:17px;letter-spacing:-.035em;}
+.dash-setting-grid p{margin:0;color:#34425a;font-weight:800;line-height:1.55;}
+.dash-setting-grid small{display:block;margin-top:8px;color:#7a8799;font-weight:700;line-height:1.45;}
+@media(max-width:900px){.dash-setting-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:760px){.dash-setting-grid{grid-template-columns:1fr;}.dash-info-box{font-size:14px;}}

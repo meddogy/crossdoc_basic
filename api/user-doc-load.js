@@ -14,6 +14,23 @@ async function getAllowedEmail(accessToken) {
   return email;
 }
 
+function isMissingUserDocumentsTable(info) {
+  const text = `${info?.message || ''} ${info?.cause || ''} ${JSON.stringify(info?.diagnostics || {})}`;
+  return text.includes('user_documents') && (text.includes('Could not find the table') || text.includes('schema cache') || text.includes('does not exist'));
+}
+function missingUserDocumentsPayload(defaultError, info) {
+  const missing = isMissingUserDocumentsTable(info);
+  if (!missing) return null;
+  return {
+    error: '내 문서 저장 테이블이 아직 만들어지지 않았습니다.',
+    detail: 'Supabase SQL Editor에서 supabase_cloud_documents.sql 파일 내용을 한 번 실행해 주세요. 실행 후 1~2분 뒤 다시 저장하면 됩니다.',
+    status: 404,
+    action: 'supabase_cloud_documents.sql 실행 필요',
+    cause: info?.message || defaultError,
+    diagnostics: info?.diagnostics,
+  };
+}
+
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ['POST'])) return;
   try {
@@ -31,6 +48,8 @@ export default async function handler(req, res) {
   } catch (error) {
     const info = serializeError(error);
     console.error('[user-doc-load] failed', JSON.stringify(info, null, 2));
+    const tableMissing = missingUserDocumentsPayload('내 문서 불러오기에 실패했습니다.', info);
+    if (tableMissing) return sendJson(res, 404, tableMissing);
     return sendJson(res, error.status || 500, {
       error: '내 문서 불러오기에 실패했습니다.',
       detail: info.message,

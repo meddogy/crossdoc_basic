@@ -3287,12 +3287,58 @@ function DashboardCloudDocuments({auth,onLoadDocument,onOpenWriter}){
     {message&&<p className={message.includes('삭제')||message.includes('불러')?'dash-message ok':'dash-message'}>{message}</p>}
   </section>
 }
+function DashboardHomePanel({currentType,recentDocs,onOpenDoc,onOpenWriter,onLoadDocument,auth}){
+  return <>
+    <section className="product-dash-hero">
+      <div><h2>반복되는 교회 문서, 10분 안에 완성하세요.</h2><p>공지 · 월간행사 · 주간보고서 · 기획안 · PDF/PNG 저장까지 한 화면에서 진행합니다.</p><div className="dash-chip-row"><span>A4 인쇄 최적화</span><span>PDF/PNG 저장</span><span>PC·모바일 이어쓰기</span></div></div>
+      <button type="button" className="dash-primary-cta" onClick={()=>onOpenDoc(currentType||'기본 공지 안내문')}>현재 문서 작성하기</button>
+    </section>
+    <section className="dash-section">
+      <div className="dash-section-head"><div><h2>문서 만들기</h2><p>필요한 문서를 선택하면 작성 화면으로 이동합니다.</p></div></div>
+      <div className="dash-doc-card-grid">
+        {DASHBOARD_DOC_CARDS.map(card=><button type="button" className="dash-doc-card" key={card.type} onClick={()=>onOpenDoc(card.type)}>
+          <span className="dash-card-icon">{card.icon}</span><b>{card.type}</b><em>{card.desc}</em>
+        </button>)}
+      </div>
+    </section>
+    <DashboardCloudDocuments auth={auth} onLoadDocument={onLoadDocument} onOpenWriter={onOpenWriter}/>
+    <section className="dash-section dash-small-grid">
+      <article><h3>최근 작업</h3>{recentDocs?.length?<div className="dash-recent-list">{recentDocs.slice(0,4).map(t=><button key={t} type="button" onClick={()=>onOpenDoc(t)}>{t}</button>)}</div>:<p>문서를 열면 최근 작업이 여기에 표시됩니다.</p>}</article>
+      <article><h3>사용 흐름</h3><ol><li>문서 선택</li><li>내용 입력</li><li>미리보기 확인</li><li>PDF/PNG 저장</li></ol></article>
+      <article><h3>모바일 사용</h3><p>신청·확인·간단 수정은 모바일에서 가능하고, PDF/PNG 저장은 PC 환경이 가장 안정적입니다.</p></article>
+    </section>
+  </>
+}
+function DashboardTemplatesPanel({onOpenDoc}){
+  return <section className="dash-section">
+    <div className="dash-section-head"><div><h2>템플릿</h2><p>BASIC에서 제공하는 5가지 교회 실무 문서 양식입니다.</p></div></div>
+    <div className="dash-doc-card-grid">
+      {DASHBOARD_DOC_CARDS.map(card=><button type="button" className="dash-doc-card" key={card.type} onClick={()=>onOpenDoc(card.type)}>
+        <span className="dash-card-icon">{card.icon}</span><b>{card.type}</b><em>{card.desc}</em>
+      </button>)}
+    </div>
+    <div className="dash-info-box"><b>템플릿 사용 방법</b><p>카드를 누르면 작성 화면으로 이동합니다. 대표 샘플을 수정하거나 빈 양식으로 바꿔서 사용할 수 있습니다.</p></div>
+  </section>
+}
+function DashboardSettingsPanel({auth,onOpenWriter}){
+  const email=auth?.email||'로그인 계정';
+  return <section className="dash-section">
+    <div className="dash-section-head"><div><h2>설정</h2><p>접속·저장·모바일 사용 안내입니다.</p></div><button type="button" className="dash-soft-btn" onClick={onOpenWriter}>작성 화면으로</button></div>
+    <div className="dash-setting-grid">
+      <article><h3>로그인 계정</h3><p>{email}</p><small>승인된 이메일만 작성기에 접속할 수 있습니다.</small></article>
+      <article><h3>개인 기기 사용</h3><p>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요.</p><small>같은 기기에서는 세션이 유지되어 다시 접속이 쉬워집니다.</small></article>
+      <article><h3>공용 PC 사용</h3><p>교회 공용 PC나 다른 사람의 기기에서는 사용 후 로그아웃해 주세요.</p><small>개인정보와 문서 내용을 보호하기 위한 설정입니다.</small></article>
+      <article><h3>클라우드 저장</h3><p>내 문서 저장을 쓰려면 Supabase SQL Editor에서 user_documents 테이블을 먼저 만들어야 합니다.</p><small>파일: supabase_cloud_documents.sql</small></article>
+      <article><h3>모바일 로그인</h3><p>새 휴대폰이나 새 브라우저에서는 최초 1회 이메일 인증이 필요합니다.</p><small>메일 발송 한도 문제가 반복되면 Custom SMTP 설정이 필요합니다.</small></article>
+      <article><h3>출력 권장 환경</h3><p>PDF/PNG 저장은 PC 또는 노트북 환경이 가장 안정적입니다.</p><small>모바일은 신청·확인·간단 수정 용도로 권장합니다.</small></article>
+    </div>
+  </section>
+}
 function ProductDashboard({auth,currentType,recentDocs,onOpenDoc,onOpenWriter,onLoadDocument}){
   const [active,setActive]=useState('home');
   function go(section){
+    if(section==='write'){onOpenWriter?.();return;}
     setActive(section);
-    if(section==='write')onOpenWriter?.();
-    if(section==='docs')setTimeout(()=>document.querySelector('#dashboard-documents')?.scrollIntoView({behavior:'smooth',block:'start'}),40);
   }
   return <div className="product-dashboard-shell">
     <aside className="product-dash-sidebar">
@@ -3301,8 +3347,8 @@ function ProductDashboard({auth,currentType,recentDocs,onOpenDoc,onOpenWriter,on
         <button type="button" className={active==='home'?'active':''} onClick={()=>go('home')}><span>🏠</span>홈</button>
         <button type="button" className={active==='write'?'active':''} onClick={()=>go('write')}><span>✎</span>문서 작성</button>
         <button type="button" className={active==='docs'?'active':''} onClick={()=>go('docs')}><span>📁</span>내 문서</button>
-        <button type="button" className={active==='templates'?'active':''} onClick={()=>setActive('templates')}><span>📄</span>템플릿</button>
-        <button type="button" className={active==='settings'?'active':''} onClick={()=>setActive('settings')}><span>⚙</span>설정</button>
+        <button type="button" className={active==='templates'?'active':''} onClick={()=>go('templates')}><span>📄</span>템플릿</button>
+        <button type="button" className={active==='settings'?'active':''} onClick={()=>go('settings')}><span>⚙</span>설정</button>
       </nav>
       <div className="product-dash-note"><b>모바일 사용</b><p>신청·확인·간단 수정은 모바일 가능, PDF/PNG 저장은 PC 권장입니다.</p></div>
     </aside>
@@ -3311,24 +3357,10 @@ function ProductDashboard({auth,currentType,recentDocs,onOpenDoc,onOpenWriter,on
         <div><p className="dash-eyebrow">교회 실무 문서 작성기</p><h1>교회문서키트 BASIC</h1><p>교회 실무 문서를 빠르게 작성하고 저장하세요.</p></div>
         <div className="dash-user-pill"><span>👤</span><div><b>사용자</b><em>{auth?.email||'로그인 계정'}</em></div></div>
       </header>
-      <section className="product-dash-hero">
-        <div><h2>반복되는 교회 문서, 10분 안에 완성하세요.</h2><p>공지 · 월간행사 · 주간보고서 · 기획안 · PDF/PNG 저장까지 한 화면에서 진행합니다.</p><div className="dash-chip-row"><span>A4 인쇄 최적화</span><span>PDF/PNG 저장</span><span>PC·모바일 이어쓰기</span></div></div>
-        <button type="button" className="dash-primary-cta" onClick={()=>onOpenDoc(currentType||'기본 공지 안내문')}>현재 문서 작성하기</button>
-      </section>
-      <section className="dash-section">
-        <div className="dash-section-head"><div><h2>문서 만들기</h2><p>필요한 문서를 선택하면 작성 화면으로 이동합니다.</p></div></div>
-        <div className="dash-doc-card-grid">
-          {DASHBOARD_DOC_CARDS.map(card=><button type="button" className="dash-doc-card" key={card.type} onClick={()=>onOpenDoc(card.type)}>
-            <span className="dash-card-icon">{card.icon}</span><b>{card.type}</b><em>{card.desc}</em>
-          </button>)}
-        </div>
-      </section>
-      <DashboardCloudDocuments auth={auth} onLoadDocument={onLoadDocument} onOpenWriter={onOpenWriter}/>
-      <section className="dash-section dash-small-grid">
-        <article><h3>최근 작업</h3>{recentDocs?.length?<div className="dash-recent-list">{recentDocs.slice(0,4).map(t=><button key={t} type="button" onClick={()=>onOpenDoc(t)}>{t}</button>)}</div>:<p>문서를 열면 최근 작업이 여기에 표시됩니다.</p>}</article>
-        <article><h3>사용 흐름</h3><ol><li>문서 선택</li><li>내용 입력</li><li>미리보기 확인</li><li>PDF/PNG 저장</li></ol></article>
-        <article><h3>템플릿</h3><p>현재 BASIC 5종 문서가 제공됩니다. 정식 출시 전 문서팩을 순차적으로 확장할 수 있습니다.</p></article>
-      </section>
+      {active==='home'&&<DashboardHomePanel auth={auth} currentType={currentType} recentDocs={recentDocs} onOpenDoc={onOpenDoc} onOpenWriter={onOpenWriter} onLoadDocument={onLoadDocument}/>}      
+      {active==='docs'&&<DashboardCloudDocuments auth={auth} onLoadDocument={onLoadDocument} onOpenWriter={onOpenWriter}/>}      
+      {active==='templates'&&<DashboardTemplatesPanel onOpenDoc={onOpenDoc}/>}      
+      {active==='settings'&&<DashboardSettingsPanel auth={auth} onOpenWriter={onOpenWriter}/>}      
     </main>
   </div>
 }
@@ -3605,7 +3637,7 @@ function AppShell({auth}){
   const [mobileSimple,setMobileSimple]=useState(true);
   const [mobileStage,setMobileStage]=useState('write');
   const [easyMode,setEasyMode]=useState(()=>{try{return localStorage.getItem('church-docs-workshop-easy-mode')!=='off'}catch{return true}});
-  const [appScreen,setAppScreen]=useState(()=>{try{return localStorage.getItem('church-docs-kit-basic-v1-screen')||'home'}catch{return 'home'}});
+  const [appScreen,setAppScreen]=useState(()=>{try{const seen=localStorage.getItem('church-docs-kit-basic-v1-23-dashboard-seen');if(!seen){localStorage.setItem('church-docs-kit-basic-v1-23-dashboard-seen','1');localStorage.setItem('church-docs-kit-basic-v1-screen','home');return 'home'}return localStorage.getItem('church-docs-kit-basic-v1-screen')||'home'}catch{return 'home'}});
   const [helpOpen,setHelpOpen]=useState(false);
   const [recentDocs,setRecentDocs]=useState(()=>{try{return JSON.parse(localStorage.getItem('church-docs-workshop-recent-docs')||'[]')}catch{return []}});
   useEffect(()=>{try{localStorage.setItem('church-docs-workshop-easy-mode',easyMode?'on':'off')}catch{}},[easyMode]);
@@ -3908,7 +3940,7 @@ function AppShell({auth}){
     setAppScreen('writer');
   }
   if(appScreen==='home')return <ProductDashboard auth={auth} currentType={type} recentDocs={recentDocs} onOpenDoc={openDashboardDoc} onOpenWriter={()=>setAppScreen('writer')} onLoadDocument={loadDashboardCloudDocument}/>;
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-23-dashboard-stable v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
