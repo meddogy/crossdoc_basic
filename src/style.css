@@ -13162,3 +13162,11 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
     content:''!important;
   }
 }
+
+/* BASIC 1.31 hotfix: "작성기 주소 복사·공용 PC 로그아웃" 안내바가 모바일 하단 탭바(홈·입력·확인·저장)를 가리는 문제 수정.
+   두 요소 모두 하단 고정이라 겹쳤던 것을, 안내바를 탭바보다 위쪽으로 띄워 분리함. */
+@media(max-width:720px){
+  .auth-user-bar{
+    bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
