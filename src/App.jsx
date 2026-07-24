@@ -101,16 +101,16 @@ async function updateBetaApplication(passcode,id,action){
 }
 
 async function listCloudDocuments(session){
-  return apiPost('/api/user-doc-list',{access_token:session?.access_token});
+  return apiPost('/api/user-docs',{action:'list',access_token:session?.access_token});
 }
 async function saveCloudDocument(session,payload){
-  return apiPost('/api/user-doc-save',{access_token:session?.access_token,...payload});
+  return apiPost('/api/user-docs',{action:'save',access_token:session?.access_token,...payload});
 }
 async function loadCloudDocument(session,id){
-  return apiPost('/api/user-doc-load',{access_token:session?.access_token,id});
+  return apiPost('/api/user-docs',{action:'load',access_token:session?.access_token,id});
 }
 async function deleteCloudDocument(session,id){
-  return apiPost('/api/user-doc-delete',{access_token:session?.access_token,id});
+  return apiPost('/api/user-docs',{action:'delete',access_token:session?.access_token,id});
 }
 
 async function requestLoginCode(email){

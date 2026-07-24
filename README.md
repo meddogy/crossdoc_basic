@@ -1,4 +1,4 @@
-# 교회문서키트 BASIC 1.24
+# 교회문서키트 BASIC 1.24.1.1
 
 ## 핵심 변경
 
@@ -25,3 +25,11 @@ Supabase 기본 메일 템플릿이 `{{ .ConfirmationURL }}`만 사용하는 상
 
 PC·모바일 이어쓰기 기능을 사용하려면 `supabase_cloud_documents.sql`을 Supabase SQL Editor에서 한 번 실행해야 합니다.
 이미 실행했다면 다시 실행할 필요는 없습니다.
+
+
+## 1.24.1 긴급 수정
+
+- Vercel Hobby 플랜의 Serverless Functions 12개 제한에 맞추기 위해 API 파일 수를 줄였습니다.
+- `user-doc-list`, `user-doc-save`, `user-doc-load`, `user-doc-delete`를 `user-docs` 하나로 통합했습니다.
+- 공통 Supabase 유틸 파일은 `api` 밖의 `lib` 폴더로 이동했습니다.
+- 기능은 유지하면서 배포 제한 오류를 해결한 버전입니다.

@@ -1,4 +1,4 @@
-import { methodGuard, readJson, sendJson, serviceRoleRequest, serializeError } from './_supabase.js';
+import { methodGuard, readJson, sendJson, serviceRoleRequest, serializeError } from '../lib/_supabase.js';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
