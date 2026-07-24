@@ -1,4 +1,4 @@
-const CACHE_NAME = 'church-docs-kit-basic-1-19';
+const CACHE_NAME = 'church-docs-kit-basic-1-20';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', (event) => {
   self.skipWaiting();

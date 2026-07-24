@@ -8,12 +8,12 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.19 선택 표시 정리/신청서 연락처 보강판: 미리보기 선택 해제와 안내 문구 정리
+// BASIC 1.22 자유 접속 보강판: 기기별 최초 로그인 후 자동 세션 갱신으로 PC·모바일 사용성을 개선
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
-  mode:'Vercel API proxy + PWA + shortcut helper',
-  note:'로그인 후 작성기 기본 주소를 복사하고 바로가기로 저장할 수 있도록 안내합니다.'
+  mode:'Vercel API proxy + persistent refresh session + PWA',
+  note:'기기별 최초 로그인 후 refresh token으로 세션을 자동 갱신합니다.'
 };
 function readableSupabaseError(error){
   const parts=[];
@@ -100,10 +100,52 @@ async function updateBetaApplication(passcode,id,action){
   return apiPost('/api/approve-beta',{passcode,id,action});
 }
 
+async function listCloudDocuments(session){
+  return apiPost('/api/user-doc-list',{access_token:session?.access_token});
+}
+async function saveCloudDocument(session,payload){
+  return apiPost('/api/user-doc-save',{access_token:session?.access_token,...payload});
+}
+async function loadCloudDocument(session,id){
+  return apiPost('/api/user-doc-load',{access_token:session?.access_token,id});
+}
+async function deleteCloudDocument(session,id){
+  return apiPost('/api/user-doc-delete',{access_token:session?.access_token,id});
+}
+
 async function requestMagicLink(email){
   const clean=normalizeEmail(email);
   if(!clean)throw new Error('이메일을 입력해 주세요.');
   return apiPost('/api/send-login-link',{email:clean,redirectTo:authRedirectUrl()});
+}
+async function requestRefreshSession(session){
+  const refreshToken=String(session?.refresh_token||'').trim();
+  if(!refreshToken)throw new Error('저장된 갱신 토큰이 없습니다. 다시 로그인해 주세요.');
+  const data=await apiPost('/api/refresh-session',{refresh_token:refreshToken});
+  const next=data?.session||data;
+  if(!next?.access_token)throw new Error('세션 갱신 응답이 올바르지 않습니다.');
+  return {
+    access_token:next.access_token,
+    refresh_token:next.refresh_token||refreshToken,
+    token_type:next.token_type||session?.token_type||'bearer',
+    expires_at:Date.now()+Number(next.expires_in||3600)*1000,
+    user:next.user||null
+  };
+}
+function sessionNeedsRefresh(session){
+  const expiresAt=Number(session?.expires_at||0);
+  if(!session?.access_token)return false;
+  if(!session?.refresh_token)return false;
+  if(!expiresAt)return false;
+  return Date.now()>expiresAt-5*60*1000;
+}
+async function getFreshSession(session){
+  if(sessionNeedsRefresh(session)){
+    const refreshed=await requestRefreshSession(session);
+    writeAuthSession(refreshed);
+    return refreshed;
+  }
+  return session;
 }
 async function getAuthUser(session){
   const data=await apiPost('/api/auth-user',{access_token:session?.access_token});
@@ -181,8 +223,8 @@ function PwaInstallBanner(){
   }
   return <div className="pwa-banner">
     <div>
-      <b>바로가기용 주소를 저장해 주세요</b>
-      <p>메일의 Sign in 링크는 임시 로그인용입니다. 계속 사용할 주소는 작성기 기본 주소입니다.</p>
+      <b>이 기기에서 계속 사용할 주소입니다</b>
+      <p>최초 로그인 후에는 세션이 자동 갱신됩니다. 개인 기기에서는 로그아웃하지 말고 이 주소를 홈 화면/즐겨찾기에 저장해 주세요.</p>
       <div className="shortcut-url"><code>{homeUrl}</code></div>
       <details>
         <summary>바로가기 만드는 방법</summary>
@@ -210,8 +252,26 @@ function AuthGate({children}){
   const [error,setError]=useState('');
   const [errorDetail,setErrorDetail]=useState('');
   const [session,setSession]=useState(null);
+  const sessionRef=useRef(null);
   const [formEmail,setFormEmail]=useState('');
   const [copiedAddress,setCopiedAddress]=useState(false);
+  useEffect(()=>{ sessionRef.current=session; },[session]);
+  useEffect(()=>{
+    if(status!=='allowed' || !session?.refresh_token)return undefined;
+    const timer=setInterval(async()=>{
+      try{
+        const current=sessionRef.current;
+        if(!current?.refresh_token)return;
+        const next=await requestRefreshSession(current);
+        writeAuthSession(next);
+        sessionRef.current=next;
+        setSession(next);
+      }catch(e){
+        console.warn('자동 세션 갱신 실패',e);
+      }
+    },45*60*1000);
+    return ()=>clearInterval(timer);
+  },[status,session?.refresh_token]);
   useEffect(()=>{
     let cancelled=false;
     async function boot(){
@@ -219,15 +279,27 @@ function AuthGate({children}){
       setError('');
       try{
         const hashSession=parseAuthHash();
-        const saved=hashSession||readAuthSession();
+        let saved=hashSession||readAuthSession();
         if(!saved?.access_token){setStatus('signedOut');return;}
         writeAuthSession(saved);
-        const user=await getAuthUser(saved);
+        let activeSession=await getFreshSession(saved);
+        let user;
+        try{
+          user=await getAuthUser(activeSession);
+        }catch(authError){
+          if(activeSession?.refresh_token){
+            activeSession=await requestRefreshSession(activeSession);
+            writeAuthSession(activeSession);
+            user=await getAuthUser(activeSession);
+          }else{
+            throw authError;
+          }
+        }
         const userEmail=normalizeEmail(user?.email);
         if(!userEmail)throw new Error('로그인 이메일을 확인하지 못했습니다.');
-        const allowed=await checkAllowedBuyer(userEmail,saved);
+        const allowed=await checkAllowedBuyer(userEmail,activeSession);
         if(cancelled)return;
-        setSession(saved);
+        setSession(activeSession);
         setEmail(userEmail);
         if(allowed){setBuyer(allowed);setStatus('allowed');}
         else{setBuyer(null);setStatus('notAllowed');}
@@ -252,7 +324,7 @@ function AuthGate({children}){
     try{
       await requestMagicLink(clean);
       setStatus('emailSent');
-      setMessage(`${clean} 주소로 로그인 링크를 보냈습니다. 메일의 Sign in 링크는 로그인용 임시 링크입니다. 로그인 후에는 작성기 기본 주소를 바로가기/즐겨찾기로 저장해 주세요.`);
+      setMessage(`${clean} 주소로 로그인 링크를 보냈습니다. 이 기기에서는 링크를 한 번만 열면 이후에는 자동으로 로그인 상태가 유지됩니다. 메일이 오지 않으면 1~2분 기다린 뒤 스팸함을 확인해 주세요.`);
     }catch(e){
       console.error(e);
       setStatus('signedOut');
@@ -276,8 +348,9 @@ function AuthGate({children}){
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>구매 시 등록한 이메일로 처음 한 번 로그인해 주세요. 메일의 Sign in 링크는 임시 로그인용이며, 실제로 저장할 주소는 작성기 기본 주소입니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'로그인 링크 받기'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>로그인 후에는 개인 PC에서 로그아웃하지 않고 창만 닫아도 됩니다. 다음부터는 작성기 기본 주소를 즐겨찾기/바로가기/홈 화면에 저장해 사용하세요.</small></form></div>;
-  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>개인 PC는 창만 닫으세요</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 다음 접속 시 이메일 링크 인증이 다시 필요합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{children}</>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>승인된 이메일로 기기별 최초 1회만 로그인해 주세요. 이후에는 세션이 자동 갱신되어 PC와 모바일에서 더 자유롭게 사용할 수 있습니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'로그인 링크 발송 중…':'이 기기에서 로그인 시작'}</button>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요. 같은 기기에서는 다음부터 이메일 링크를 다시 받지 않아도 됩니다. 공용 PC에서만 로그아웃하세요.</small></form></div>;
+  const authInfo={email,buyer,session,signOut};
+  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>이 기기 자동 로그인 유지 중</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 이 기기에서는 다음 접속 시 이메일 링크 인증이 다시 필요합니다. 개인 기기라면 로그아웃하지 않는 것을 권장합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{React.isValidElement(children)?React.cloneElement(children,{auth:authInfo}):children}</>;
 }
 
 const DEPARTMENTS=['선교부','교육부','문화부','예배부','사회봉사부','관리부','재정부','속회','소그룹','청년부','기타'];
@@ -3065,12 +3138,199 @@ function encodeSharePayload(payload){return btoa(unescape(encodeURIComponent(JSO
 function decodeSharePayload(text){return JSON.parse(decodeURIComponent(escape(atob(text))))}
 
 
+function cloudDate(value){
+  if(!value)return '';
+  try{return new Date(value).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return ''}
+}
+function CloudSyncPanel({auth,all,setAll,type,setType,bundleTypes,setBundleTypes,setSavedAt}){
+  const [open,setOpen]=useState(false);
+  const [docs,setDocs]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [cloudId,setCloudId]=useState(()=>{try{return localStorage.getItem('church-docs-kit-basic-v1-cloud-doc-id')||''}catch{return ''}});
+  const [title,setTitle]=useState(()=>{try{return localStorage.getItem('church-docs-kit-basic-v1-cloud-title')||''}catch{return ''}});
+  const [message,setMessage]=useState('');
+  const hasSession=!!auth?.session?.access_token;
+  const defaultTitle=title||`${type} ${new Date().toLocaleDateString('ko-KR')}`;
+  async function refresh(){
+    if(!hasSession){setMessage('로그인 후 사용할 수 있습니다.');return;}
+    setLoading(true);setMessage('');
+    try{const data=await listCloudDocuments(auth.session);setDocs(data?.documents||[]);setMessage('내 문서 목록을 불러왔습니다.');}
+    catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  async function saveCloud(asNew=false){
+    if(!hasSession){setMessage('로그인 후 사용할 수 있습니다.');return;}
+    setLoading(true);setMessage('클라우드에 저장하는 중입니다…');
+    try{
+      const data=await saveCloudDocument(auth.session,{id:asNew?'':cloudId,title:defaultTitle,doc_type:type,bundle_types:bundleTypes,data:all});
+      const saved=data?.document||{};
+      if(saved.id){setCloudId(saved.id);try{localStorage.setItem('church-docs-kit-basic-v1-cloud-doc-id',saved.id)}catch{}}
+      if(saved.title){setTitle(saved.title);try{localStorage.setItem('church-docs-kit-basic-v1-cloud-title',saved.title)}catch{}}
+      setMessage('클라우드 저장 완료 · 다른 기기에서 같은 이메일로 불러올 수 있습니다.');
+      setSavedAt?.('클라우드 저장 완료');
+      await refresh();
+    }catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  async function loadOne(doc){
+    if(!hasSession)return;
+    if(!confirm(`“${doc.title}” 문서를 불러올까요?\n현재 화면의 내용은 불러온 문서로 바뀝니다.`))return;
+    setLoading(true);setMessage('불러오는 중입니다…');
+    try{
+      const data=await loadCloudDocument(auth.session,doc.id);
+      const loaded=data?.document;
+      if(!loaded?.data)throw new Error('문서 데이터가 없습니다.');
+      const merged=merge(loaded.data);
+      setAll(merged);
+      const nextType=loaded.doc_type||type;
+      setType(nextType);
+      setBundleTypes(Array.isArray(loaded.bundle_types)&&loaded.bundle_types.length?loaded.bundle_types:[nextType]);
+      setCloudId(loaded.id);setTitle(loaded.title||'');
+      try{localStorage.setItem('church-docs-kit-basic-v1-cloud-doc-id',loaded.id);localStorage.setItem('church-docs-kit-basic-v1-cloud-title',loaded.title||'')}catch{}
+      saveToStorage(merged);
+      setMessage('불러오기 완료 · 이제 이 기기에서도 이어서 수정할 수 있습니다.');
+      setSavedAt?.('클라우드 문서 불러옴');
+    }catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  async function removeOne(doc){
+    if(!hasSession)return;
+    if(!confirm(`“${doc.title}” 문서를 클라우드 목록에서 삭제할까요?\n현재 기기에 저장된 내용은 삭제되지 않습니다.`))return;
+    setLoading(true);setMessage('삭제 중입니다…');
+    try{await deleteCloudDocument(auth.session,doc.id);if(cloudId===doc.id){setCloudId('');try{localStorage.removeItem('church-docs-kit-basic-v1-cloud-doc-id')}catch{}}setMessage('클라우드 문서를 삭제했습니다.');await refresh();}
+    catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  useEffect(()=>{if(open&&hasSession&&docs.length===0)refresh();},[open]);
+  return <section className="cloud-sync-panel" aria-label="PC 모바일 이어쓰기">
+    <div className="cloud-sync-head">
+      <div><b>PC·모바일 이어쓰기</b><span>같은 이메일로 로그인하면 내 문서를 클라우드에 저장하고 다른 기기에서 불러올 수 있습니다.</span></div>
+      <div className="cloud-sync-actions"><button type="button" onClick={()=>setOpen(v=>!v)}>{open?'내 문서 닫기':'내 문서 열기'}</button><button type="button" className="primary" disabled={loading||!hasSession} onClick={()=>saveCloud(false)}>{loading?'처리 중…':(cloudId?'클라우드 저장':'새 문서 저장')}</button></div>
+    </div>
+    {open&&<div className="cloud-sync-body">
+      <div className="cloud-save-row"><label><span>저장 이름</span><input value={title} onChange={e=>{setTitle(e.target.value);try{localStorage.setItem('church-docs-kit-basic-v1-cloud-title',e.target.value)}catch{}}} placeholder={`${type} ${new Date().toLocaleDateString('ko-KR')}`} /></label><button type="button" disabled={loading||!hasSession} onClick={()=>saveCloud(false)}>{cloudId?'현재 문서에 덮어쓰기':'클라우드에 저장'}</button><button type="button" disabled={loading||!hasSession} onClick={()=>saveCloud(true)}>새 이름으로 저장</button><button type="button" disabled={loading||!hasSession} onClick={refresh}>목록 새로고침</button></div>
+      <p className="cloud-tip">모바일에서는 신청·확인·간단 수정이 가능하고, PDF/PNG 저장은 PC 환경이 가장 안정적입니다.</p>
+      {message&&<div className={message.includes('완료')||message.includes('불러왔')||message.includes('삭제')?'cloud-message ok':'cloud-message'}>{message}</div>}
+      <div className="cloud-doc-list">
+        {docs.length===0?<div className="cloud-empty">아직 클라우드에 저장된 문서가 없습니다.</div>:docs.map(d=><article key={d.id} className={cloudId===d.id?'active':''}>
+          <div><b>{d.title||'제목 없음'}</b><span>{d.doc_type||'문서'} · {cloudDate(d.updated_at)}</span></div>
+          <div className="cloud-doc-actions"><button type="button" onClick={()=>loadOne(d)}>불러오기</button><button type="button" onClick={()=>removeOne(d)}>삭제</button></div>
+        </article>)}
+      </div>
+    </div>}
+  </section>
+}
+
+
 function AssistantStartPanel({type,setType,setSelected,recentDocs=[]}){
   const shortcuts=[
     ['기본 공지','기본 공지 안내문'],['월간 안내','각부 월간행사 안내'],['부서보고','부서별 주간보고서'],['통합보고','부서 통합 주간보고서'],['수련회기획','행사 및 수련회 기획안']
   ];
   function choose(t){setType(t);setSelected?.(defaultBundleFor(t));setTimeout(()=>document.querySelector('.edit-drawer')?.setAttribute('open',''),60)}
   return <div className="assistant-start-panel"><b>빠른 시작</b><p>만들 문서를 고르면 바로 입력 단계로 이동합니다.</p><div className="assistant-shortcuts">{shortcuts.map(([label,t])=><button type="button" key={t} className={type===t?'active':''} onClick={()=>choose(t)}>{label}</button>)}</div>{recentDocs.length? <><b className="recent-title">최근 작업</b><div className="recent-docs">{recentDocs.slice(0,4).map(t=><button type="button" key={t} onClick={()=>choose(t)}>{t}</button>)}</div></>:null}</div>
+}
+
+
+const DASHBOARD_DOC_CARDS=[
+  {type:'기본 공지 안내문',icon:'📣',desc:'회의·기도회·부서 공지를 한 장 안내문으로 정리'},
+  {type:'각부 월간행사 안내',icon:'🗓️',desc:'월간 일정과 협조 요청을 카카오톡/인쇄용으로 정리'},
+  {type:'부서별 주간보고서',icon:'📋',desc:'한 부서의 출석·활동·다음 주 계획을 보고'},
+  {type:'부서 통합 주간보고서',icon:'👥',desc:'여러 부서 현황을 한 장 보고서로 통합'},
+  {type:'행사 및 수련회 기획안',icon:'🧾',desc:'개요·일정표·예산안을 묶어 기획안 작성'}
+];
+function dashboardDate(value){try{return value?new Date(value).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}):''}catch{return ''}}
+function DashboardCloudDocuments({auth,onLoadDocument,onOpenWriter}){
+  const [docs,setDocs]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [message,setMessage]=useState('');
+  const hasSession=!!auth?.session?.access_token;
+  async function refresh(){
+    if(!hasSession){setMessage('로그인 후 내 문서를 볼 수 있습니다.');return;}
+    setLoading(true);setMessage('');
+    try{const data=await listCloudDocuments(auth.session);setDocs(data?.documents||[]);}
+    catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  useEffect(()=>{refresh()},[hasSession]);
+  async function loadDoc(d){
+    if(!hasSession)return;
+    setLoading(true);setMessage('문서를 불러오는 중입니다…');
+    try{
+      const data=await loadCloudDocument(auth.session,d.id);
+      const loaded=data?.document;
+      if(!loaded?.data)throw new Error('문서 데이터가 없습니다.');
+      onLoadDocument?.(loaded);
+      setMessage('문서를 불러왔습니다.');
+    }catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  async function removeDoc(d){
+    if(!hasSession)return;
+    if(!confirm(`“${d.title||'제목 없음'}” 문서를 클라우드 목록에서 삭제할까요?`))return;
+    setLoading(true);setMessage('삭제 중입니다…');
+    try{await deleteCloudDocument(auth.session,d.id);setMessage('삭제했습니다.');await refresh();}
+    catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
+  const rows=docs.slice(0,5);
+  return <section className="dash-section dash-documents-section" id="dashboard-documents">
+    <div className="dash-section-head"><div><h2>내 문서</h2><p>클라우드에 저장한 문서를 PC·모바일에서 이어서 열 수 있습니다.</p></div><div className="dash-section-actions"><button type="button" onClick={refresh} disabled={loading}>{loading?'불러오는 중…':'새로고침'}</button><button type="button" className="dash-soft-btn" onClick={onOpenWriter}>작성 화면으로</button></div></div>
+    <div className="dash-doc-table" role="table" aria-label="내 문서 목록">
+      <div className="dash-doc-row dash-doc-head" role="row"><span>제목</span><span>최종 수정일</span><span>형식</span><span>관리</span></div>
+      {rows.length? rows.map(d=><div className="dash-doc-row" role="row" key={d.id}>
+        <span><b>{d.title||'제목 없음'}</b><em>{d.doc_type||'문서'}</em></span>
+        <span>{dashboardDate(d.updated_at||d.created_at)}</span>
+        <span>{d.doc_type?.includes('기획안')?'A4':'PDF'}</span>
+        <span className="dash-doc-buttons"><button type="button" onClick={()=>loadDoc(d)}>불러오기</button><button type="button" onClick={()=>removeDoc(d)}>삭제</button></span>
+      </div>) : <div className="dash-empty-docs">아직 저장된 문서가 없습니다. 작성 화면에서 <b>클라우드 저장</b>을 누르면 이곳에 표시됩니다.</div>}
+    </div>
+    {message&&<p className={message.includes('삭제')||message.includes('불러')?'dash-message ok':'dash-message'}>{message}</p>}
+  </section>
+}
+function ProductDashboard({auth,currentType,recentDocs,onOpenDoc,onOpenWriter,onLoadDocument}){
+  const [active,setActive]=useState('home');
+  function go(section){
+    setActive(section);
+    if(section==='write')onOpenWriter?.();
+    if(section==='docs')setTimeout(()=>document.querySelector('#dashboard-documents')?.scrollIntoView({behavior:'smooth',block:'start'}),40);
+  }
+  return <div className="product-dashboard-shell">
+    <aside className="product-dash-sidebar">
+      <div className="product-dash-brand"><span className="brand-mark">✚</span><div><b>교회문서키트</b><em>BASIC</em></div></div>
+      <nav className="product-dash-nav" aria-label="홈 메뉴">
+        <button type="button" className={active==='home'?'active':''} onClick={()=>go('home')}><span>🏠</span>홈</button>
+        <button type="button" className={active==='write'?'active':''} onClick={()=>go('write')}><span>✎</span>문서 작성</button>
+        <button type="button" className={active==='docs'?'active':''} onClick={()=>go('docs')}><span>📁</span>내 문서</button>
+        <button type="button" className={active==='templates'?'active':''} onClick={()=>setActive('templates')}><span>📄</span>템플릿</button>
+        <button type="button" className={active==='settings'?'active':''} onClick={()=>setActive('settings')}><span>⚙</span>설정</button>
+      </nav>
+      <div className="product-dash-note"><b>모바일 사용</b><p>신청·확인·간단 수정은 모바일 가능, PDF/PNG 저장은 PC 권장입니다.</p></div>
+    </aside>
+    <main className="product-dash-main">
+      <header className="product-dash-top">
+        <div><p className="dash-eyebrow">교회 실무 문서 작성기</p><h1>교회문서키트 BASIC</h1><p>교회 실무 문서를 빠르게 작성하고 저장하세요.</p></div>
+        <div className="dash-user-pill"><span>👤</span><div><b>사용자</b><em>{auth?.email||'로그인 계정'}</em></div></div>
+      </header>
+      <section className="product-dash-hero">
+        <div><h2>반복되는 교회 문서, 10분 안에 완성하세요.</h2><p>공지 · 월간행사 · 주간보고서 · 기획안 · PDF/PNG 저장까지 한 화면에서 진행합니다.</p><div className="dash-chip-row"><span>A4 인쇄 최적화</span><span>PDF/PNG 저장</span><span>PC·모바일 이어쓰기</span></div></div>
+        <button type="button" className="dash-primary-cta" onClick={()=>onOpenDoc(currentType||'기본 공지 안내문')}>현재 문서 작성하기</button>
+      </section>
+      <section className="dash-section">
+        <div className="dash-section-head"><div><h2>문서 만들기</h2><p>필요한 문서를 선택하면 작성 화면으로 이동합니다.</p></div></div>
+        <div className="dash-doc-card-grid">
+          {DASHBOARD_DOC_CARDS.map(card=><button type="button" className="dash-doc-card" key={card.type} onClick={()=>onOpenDoc(card.type)}>
+            <span className="dash-card-icon">{card.icon}</span><b>{card.type}</b><em>{card.desc}</em>
+          </button>)}
+        </div>
+      </section>
+      <DashboardCloudDocuments auth={auth} onLoadDocument={onLoadDocument} onOpenWriter={onOpenWriter}/>
+      <section className="dash-section dash-small-grid">
+        <article><h3>최근 작업</h3>{recentDocs?.length?<div className="dash-recent-list">{recentDocs.slice(0,4).map(t=><button key={t} type="button" onClick={()=>onOpenDoc(t)}>{t}</button>)}</div>:<p>문서를 열면 최근 작업이 여기에 표시됩니다.</p>}</article>
+        <article><h3>사용 흐름</h3><ol><li>문서 선택</li><li>내용 입력</li><li>미리보기 확인</li><li>PDF/PNG 저장</li></ol></article>
+        <article><h3>템플릿</h3><p>현재 BASIC 5종 문서가 제공됩니다. 정식 출시 전 문서팩을 순차적으로 확장할 수 있습니다.</p></article>
+      </section>
+    </main>
+  </div>
 }
 
 function DocMenuItem({t,type,setType,selected,onToggle,setSelected}){
@@ -3326,7 +3586,7 @@ function BuiltInGuideModal({type,onClose,onJump}){
       </div>
       <div className="guide-grid">
         <section><h3>현재 문서 사용 팁</h3><ul>{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></section>
-        <section><h3>저장·접속 안내</h3><ul><li>메일의 Sign in 링크는 로그인용 임시 링크입니다.</li><li>계속 사용할 주소는 작성기 기본 주소입니다.</li><li>개인 PC에서는 로그아웃하지 않고 창만 닫아도 됩니다.</li><li>공용 PC에서는 “공용 PC에서 로그아웃”을 눌러 주세요.</li></ul><div className="guide-url"><code>{homeUrl}</code></div></section>
+        <section><h3>저장·접속 안내</h3><ul><li>메일의 Sign in 링크는 로그인용 임시 링크입니다.</li><li>계속 사용할 주소는 작성기 기본 주소입니다.</li><li>개인 PC에서는 로그아웃하지 않고 창만 닫아도 됩니다.</li><li>PC와 모바일을 함께 쓰려면 “PC·모바일 이어쓰기”에서 클라우드 저장 후 다른 기기에서 불러오세요.</li><li>공용 PC에서는 “공용 PC에서 로그아웃”을 눌러 주세요.</li></ul><div className="guide-url"><code>{homeUrl}</code></div></section>
         <section><h3>자주 묻는 질문</h3><dl><dt>매번 이메일 로그인해야 하나요?</dt><dd>개인 PC에서는 로그아웃하지 않으면 로그인 상태가 유지됩니다.</dd><dt>일정표가 많으면 어떻게 하나요?</dt><dd>행사 및 수련회 기획안에서 일정표 출력 방식을 “일차별 여유형”으로 선택하세요.</dd><dt>글씨가 표 밖으로 나가면요?</dt><dd>문서 기본도구에서 글자 크기를 작게 조정하거나 문장을 짧게 나눠 주세요.</dd></dl></section>
         <section><h3>바로 이동</h3><div className="guide-actions"><button type="button" onClick={()=>onJump?.('.edit-drawer',true)}>문서 편집판 열기</button><button type="button" onClick={()=>onJump?.('.preview-pane')}>미리보기 보기</button><button type="button" onClick={()=>onJump?.('.document-ribbon')}>저장 메뉴 보기</button></div></section>
       </div>
@@ -3334,7 +3594,7 @@ function BuiltInGuideModal({type,onClose,onJump}){
   </div>;
 }
 
-function AppShell(){
+function AppShell({auth}){
   const [all,setAll]=useAutosave();
   const [type,setType]=useState('기본 공지 안내문');
   const [view,setView]=useState('fit');
@@ -3345,9 +3605,11 @@ function AppShell(){
   const [mobileSimple,setMobileSimple]=useState(true);
   const [mobileStage,setMobileStage]=useState('write');
   const [easyMode,setEasyMode]=useState(()=>{try{return localStorage.getItem('church-docs-workshop-easy-mode')!=='off'}catch{return true}});
+  const [appScreen,setAppScreen]=useState(()=>{try{return localStorage.getItem('church-docs-kit-basic-v1-screen')||'home'}catch{return 'home'}});
   const [helpOpen,setHelpOpen]=useState(false);
   const [recentDocs,setRecentDocs]=useState(()=>{try{return JSON.parse(localStorage.getItem('church-docs-workshop-recent-docs')||'[]')}catch{return []}});
   useEffect(()=>{try{localStorage.setItem('church-docs-workshop-easy-mode',easyMode?'on':'off')}catch{}},[easyMode]);
+  useEffect(()=>{try{localStorage.setItem('church-docs-kit-basic-v1-screen',appScreen)}catch{}},[appScreen]);
   useEffect(()=>{setRecentDocs(prev=>{const next=[type,...prev.filter(x=>x!==type)].slice(0,8);try{localStorage.setItem('church-docs-workshop-recent-docs',JSON.stringify(next))}catch{}return next})},[type]);
   const previewRef=useRef(null);
   const fontDragRef=useRef(null);
@@ -3628,7 +3890,25 @@ function AppShell(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  function openDashboardDoc(nextType){
+    const t=nextType||type||'기본 공지 안내문';
+    setType(t);
+    setBundleTypes(defaultBundleFor(t));
+    setAppScreen('writer');
+    requestAnimationFrame(()=>document.querySelector('.edit-drawer')?.setAttribute('open',''));
+  }
+  function loadDashboardCloudDocument(loaded){
+    const merged=merge(loaded.data);
+    const nextType=loaded.doc_type||type||'기본 공지 안내문';
+    setAll(merged);
+    setType(nextType);
+    setBundleTypes(Array.isArray(loaded.bundle_types)&&loaded.bundle_types.length?loaded.bundle_types:[nextType]);
+    saveToStorage(merged);
+    setSavedAt('클라우드 문서를 불러왔습니다');
+    setAppScreen('writer');
+  }
+  if(appScreen==='home')return <ProductDashboard auth={auth} currentType={type} recentDocs={recentDocs} onOpenDoc={openDashboardDoc} onOpenWriter={()=>setAppScreen('writer')} onLoadDocument={loadDashboardCloudDocument}/>;
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3636,6 +3916,7 @@ function AppShell(){
     </aside>
     <main className="editor">
       <div className="topbar simple-topbar">
+        <button type="button" className="back-dashboard-btn" onClick={()=>setAppScreen('home')}>← 홈</button>
         <div className="top-title"><h2>{type}</h2><p>반복되는 교회 문서를 10분 안에 작성하고 PDF/PNG로 저장합니다.</p></div>
         <div className="actions primary-actions">
           <button type="button" className="help-main-button" onClick={()=>setHelpOpen(true)}>사용법</button>
@@ -3658,6 +3939,7 @@ function AppShell(){
           </>}
         </div>
       </div>
+      <CloudSyncPanel auth={auth} all={all} setAll={setAll} type={type} setType={setType} bundleTypes={bundleTypes} setBundleTypes={setBundleTypes} setSavedAt={setSavedAt}/>
       <FirstUsePanel type={type} setType={setType} setSelected={setBundleTypes} easyMode={easyMode} setEasyMode={setEasyMode} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} savedAt={savedAt}/>
       <MobileDocPicker type={type} setType={setType} setSelected={setBundleTypes} setStage={setMobileStage}/>
       <MobileNotice/>

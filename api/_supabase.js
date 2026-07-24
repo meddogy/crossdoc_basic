@@ -129,7 +129,7 @@ export async function supabaseRequest(path, { method = 'GET', token, body, query
         Authorization: `Bearer ${token || anonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Client-Info': 'church-docs-kit-basic/1.17',
+        'X-Client-Info': 'church-docs-kit-basic/1.22',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -184,7 +184,7 @@ export async function serviceRoleRequest(path, { method = 'GET', body, query, ti
         Authorization: `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Client-Info': 'church-docs-kit-basic/1.17-admin',
+        'X-Client-Info': 'church-docs-kit-basic/1.22-admin',
         ...headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
