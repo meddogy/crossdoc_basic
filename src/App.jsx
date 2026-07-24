@@ -2521,6 +2521,57 @@ function mobileQuickMeta(type,tab){
   }
   return base;
 }
+function mobileCaptureMainPath(type,doc){
+  if(type==='기본 공지 안내문')return 'content';
+  if(type==='각부 월간행사 안내')return 'requests';
+  if(type==='부서별 주간보고서')return 'thisWeek';
+  if(type==='부서 통합 주간보고서')return 'summary';
+  if(type==='행사 및 수련회 기획안')return 'purpose';
+  return doc?.content!==undefined?'content':'mobileMemo';
+}
+function mobileCaptureFields(type,doc){
+  const titlePath=titlePathOf(type)||'title';
+  const metaPath=metaPathOf(type)||((doc&&Object.prototype.hasOwnProperty.call(doc,'date'))?'date':(Object.prototype.hasOwnProperty.call(doc||{},'period')?'period':'mobileDate'));
+  const metaLabel=metaPath==='month'?'기간/월':(metaPath==='date'?'일시':'기간');
+  const thirdPath=type==='부서별 주간보고서'?'subDepartment':(Object.prototype.hasOwnProperty.call(doc||{},'group')?'group':(Object.prototype.hasOwnProperty.call(doc||{},'place')?'place':'mobilePlace'));
+  const thirdLabel=type==='부서별 주간보고서'?'부서':(thirdPath==='group'?'부서/그룹':'장소');
+  const fourthPath=Object.prototype.hasOwnProperty.call(doc||{},'target')?'target':(Object.prototype.hasOwnProperty.call(doc||{},'writer')?'writer':'contact');
+  const fourthLabel=fourthPath==='writer'?'작성자':(fourthPath==='contact'?'문의/담당':'대상');
+  return [
+    {path:titlePath,label:'문서 제목',placeholder:'예: 7월 교육부 월간행사 안내'},
+    {path:metaPath,label:metaLabel,placeholder:'예: 2026년 7월 / 7월 14일(주일) 오후 1시'},
+    {path:thirdPath,label:thirdLabel,placeholder:'예: 교육관 회의실 / 교육부 / 청소년부'},
+    {path:fourthPath,label:fourthLabel,placeholder:'예: 전체 교사 / 담당 교역자 / 문의처'}
+  ].filter(f=>f.path);
+}
+function mobileCaptureNoteLabel(type){
+  if(type==='기본 공지 안내문')return '공지 내용';
+  if(type==='각부 월간행사 안내')return '협조 요청·메모';
+  if(type==='부서별 주간보고서')return '이번 주 활동 메모';
+  if(type==='부서 통합 주간보고서')return '전체 요약 메모';
+  if(type==='행사 및 수련회 기획안')return '행사 목적·핵심 메모';
+  return '핵심 메모';
+}
+function MobileCapturePanel({type,doc,setDoc,setStage,setMobileSimple,onSave}){
+  const fields=mobileCaptureFields(type,doc);
+  const mainPath=mobileCaptureMainPath(type,doc);
+  const patch=(path,value)=>setDoc(setByPath(doc,path,value));
+  const openDetail=()=>{setMobileSimple?.(false);setStage?.('write');setTimeout(()=>scrollToMobileTarget('.edit-drawer',true),70)};
+  const goPreview=()=>{setStage?.('preview');setTimeout(()=>scrollToMobileTarget('.preview-pane'),40)};
+  const goSave=()=>{setStage?.('save');setTimeout(()=>scrollToMobileTarget('#mobile-save-area'),40)};
+  return <section className="mobile-capture-panel" aria-label="모바일 초안 작성">
+    <div className="mobile-capture-head">
+      <div><em>모바일은 초안만</em><b>휴대폰에서는 핵심만 적고 저장하세요</b><span>복잡한 표·일정·예산은 PC에서 이어서 정리하는 흐름이 가장 편합니다.</span></div>
+      <button type="button" onClick={goSave}>저장으로</button>
+    </div>
+    <div className="mobile-capture-message">휴대폰 작성은 <b>완성본 제작</b>이 아니라 <b>현장 메모 저장</b>용으로 잡았습니다. 제목·날짜·장소·핵심 메모만 적어도 PC에서 이어서 문서화할 수 있습니다.</div>
+    <div className="mobile-capture-fields">
+      {fields.map(f=><label key={f.path}><span>{f.label}</span><input value={String((pathTokens(f.path).reduce((acc,k)=>acc?.[k],doc))??'')} onChange={e=>patch(f.path,e.target.value)} placeholder={f.placeholder}/></label>)}
+      <label className="mobile-capture-note"><span>{mobileCaptureNoteLabel(type)}</span><textarea value={String((pathTokens(mainPath).reduce((acc,k)=>acc?.[k],doc))??'')} onChange={e=>patch(mainPath,e.target.value)} placeholder={'카톡에 적듯이 줄글로 적어도 됩니다.\n예: 날짜, 준비물, 요청사항, 기도제목을 편하게 메모하세요.'}/></label>
+    </div>
+    <div className="mobile-capture-actions"><button type="button" onClick={()=>{onSave?.();goSave();}}>임시 저장 후 저장화면</button><button type="button" onClick={goPreview}>미리보기 확인</button><button type="button" className="subtle" onClick={openDetail}>세부 서식은 필요할 때만</button></div>
+  </section>
+}
 function MobileQuickEdit({type,doc,setDoc,setStage,mobileSimple,setMobileSimple}){
   const tabs=v23TabsFor(type,doc);
   const compactTabs=tabs.filter(t=>['fields','events','schedule','budget','income','expense','prep','cue'].includes(t.kind)).slice(0,6);
@@ -3948,7 +3999,7 @@ function AppShell({auth}){
     setAppScreen('writer');
   }
   if(appScreen==='home')return <ProductDashboard auth={auth} currentType={type} recentDocs={recentDocs} onOpenDoc={openDashboardDoc} onOpenWriter={()=>setAppScreen('writer')} onLoadDocument={loadDashboardCloudDocument}/>;
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-26-mobile-easy v-basic-1-24-otp-login v-basic-1-23-dashboard-stable v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-27-mobile-companion v-basic-1-26-mobile-easy v-basic-1-24-otp-login v-basic-1-23-dashboard-stable v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3985,6 +4036,7 @@ function AppShell({auth}){
       <MobileDocPicker type={type} setType={setType} setSelected={setBundleTypes} setStage={setMobileStage}/>
       <MobileNotice/>
       <MobileModeBar stage={mobileStage} setStage={setMobileStage}/>
+      <MobileCapturePanel type={type} doc={doc} setDoc={setDoc} setStage={setMobileStage} setMobileSimple={setMobileSimple} onSave={saveNow}/>
       <MobileQuickEdit type={type} doc={doc} setDoc={setDoc} setStage={setMobileStage} mobileSimple={mobileSimple} setMobileSimple={setMobileSimple}/><MobileExportPanel busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} savedAt={savedAt}/>
       <DocumentRibbon type={type} doc={doc} setDoc={setDoc} view={view} setView={setView} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} onSave={saveNow} onBackup={exportData} onShare={shareCurrent} onSample={resetDoc} onBlank={startBlank} onImport={importData} savedAt={savedAt} onHelp={()=>setHelpOpen(true)}/>
       <div className="workspace preview-first-workspace">

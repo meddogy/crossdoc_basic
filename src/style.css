@@ -12968,3 +12968,156 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
     border-radius:12px!important;
   }
 }
+
+
+/* BASIC 1.27: 모바일은 완성 편집기가 아니라 현장 초안 저장용으로 재정의 */
+.mobile-capture-panel{display:none;}
+@media(max-width:900px){
+  .v-basic-1-27-mobile-companion .mobile-notice span::after{content:' 이제 모바일은 완성 편집보다 초안 저장과 확인 중심으로 사용합니다.';}
+  .v-basic-1-27-mobile-companion .mobile-capture-panel{
+    display:block!important;
+    margin:10px 12px 0!important;
+    padding:14px!important;
+    border-radius:24px!important;
+    border:1px solid #bfdbfe!important;
+    background:linear-gradient(180deg,#eff6ff 0%,#ffffff 65%)!important;
+    box-shadow:0 10px 28px rgba(15,23,42,.08)!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-head{
+    display:flex!important;
+    justify-content:space-between!important;
+    align-items:flex-start!important;
+    gap:10px!important;
+    margin-bottom:10px!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-head em{
+    display:inline-flex!important;
+    align-items:center!important;
+    height:24px!important;
+    padding:0 9px!important;
+    border-radius:999px!important;
+    background:#dbeafe!important;
+    color:#1d4ed8!important;
+    font-size:11px!important;
+    font-style:normal!important;
+    font-weight:950!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-head b{
+    display:block!important;
+    margin-top:7px!important;
+    font-size:18px!important;
+    line-height:1.18!important;
+    color:#0f172a!important;
+    letter-spacing:-.055em!important;
+    font-weight:1000!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-head span{
+    display:block!important;
+    margin-top:4px!important;
+    font-size:12.2px!important;
+    line-height:1.4!important;
+    color:#475569!important;
+    word-break:keep-all!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-head>button{
+    flex:0 0 auto!important;
+    min-width:74px!important;
+    height:38px!important;
+    border:0!important;
+    border-radius:999px!important;
+    background:#0f172a!important;
+    color:#fff!important;
+    font-size:12px!important;
+    font-weight:950!important;
+    box-shadow:0 8px 18px rgba(15,23,42,.18)!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-message{
+    margin:10px 0 12px!important;
+    padding:10px 12px!important;
+    border-radius:16px!important;
+    background:#fff7ed!important;
+    border:1px solid #fed7aa!important;
+    color:#7c2d12!important;
+    font-size:12px!important;
+    line-height:1.45!important;
+    word-break:keep-all!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-fields{
+    display:grid!important;
+    gap:9px!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-fields label{
+    display:grid!important;
+    gap:5px!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-fields span{
+    font-size:12px!important;
+    color:#334155!important;
+    font-weight:950!important;
+    letter-spacing:-.035em!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-fields input,
+  .v-basic-1-27-mobile-companion .mobile-capture-fields textarea{
+    width:100%!important;
+    box-sizing:border-box!important;
+    border:1px solid #cbd5e1!important;
+    border-radius:16px!important;
+    background:#fff!important;
+    color:#0f172a!important;
+    font-size:16px!important;
+    line-height:1.45!important;
+    padding:12px 13px!important;
+    outline:none!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-fields input:focus,
+  .v-basic-1-27-mobile-companion .mobile-capture-fields textarea:focus{
+    border-color:#2563eb!important;
+    box-shadow:0 0 0 3px rgba(37,99,235,.12)!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-note textarea{
+    min-height:150px!important;
+    resize:vertical!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+    margin-top:12px!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-actions button{
+    min-height:48px!important;
+    border:0!important;
+    border-radius:17px!important;
+    background:#1d4ed8!important;
+    color:#fff!important;
+    font-size:15px!important;
+    font-weight:950!important;
+    letter-spacing:-.04em!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-actions button:first-child{
+    background:#0f172a!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-capture-actions button.subtle{
+    background:#fff!important;
+    color:#475569!important;
+    border:1px solid #cbd5e1!important;
+    box-shadow:none!important;
+  }
+  .v-basic-1-27-mobile-companion.mobile-simple-on .mobile-quick-edit{
+    display:none!important;
+  }
+  .v-basic-1-27-mobile-companion.mobile-detail-on .mobile-capture-panel{
+    border-color:#fed7aa!important;
+    background:linear-gradient(180deg,#fff7ed,#ffffff 70%)!important;
+  }
+  .v-basic-1-27-mobile-companion.mobile-detail-on .mobile-capture-message::after{
+    content:' 세부 서식을 연 상태입니다. 복잡하면 다시 홈이나 저장 화면으로 이동해 주세요.';
+  }
+  .v-basic-1-27-mobile-companion .mobile-mode-bar span{
+    font-size:0!important;
+  }
+  .v-basic-1-27-mobile-companion .mobile-mode-bar span::after{
+    content:'모바일은 초안 저장 중심입니다. 전체 서식은 PC에서 마무리하세요.';
+    font-size:11px!important;
+  }
+}
