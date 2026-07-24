@@ -1,4 +1,4 @@
--- 교회문서키트 BASIC 1.17 베타 신청/관리 기능용 테이블
+-- 교회문서키트 BASIC 1.18 베타 신청/관리 기능용 테이블
 -- Supabase SQL Editor에서 실행해 주세요.
 
 create extension if not exists pgcrypto;
@@ -8,6 +8,7 @@ create table if not exists public.beta_applications (
   name text not null,
   church text,
   role text,
+  phone text,
   email text not null,
   documents text[] default '{}',
   device text,
@@ -63,3 +64,7 @@ end $$;
 
 grant usage on schema public to authenticated;
 grant select on public.allowed_users to authenticated;
+
+
+-- BASIC 1.18: 기존 테이블에 연락처 컬럼을 추가합니다.
+alter table public.beta_applications add column if not exists phone text;

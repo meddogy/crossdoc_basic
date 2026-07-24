@@ -8,7 +8,7 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.17 베타 신청/관리판: 앱 안 도움말·일정표 편집판 줄바꿈 보강
+// BASIC 1.19 선택 표시 정리/신청서 연락처 보강판: 미리보기 선택 해제와 안내 문구 정리
 // 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 로그인 링크를 요청합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
@@ -556,7 +556,7 @@ function setByPath(obj,path,value){
   for(let i=0;i<parts.length-1;i++){const k=parts[i],n=parts[i+1];const existing=cur[k];cur[k]=Array.isArray(existing)?[...existing]:(existing&&typeof existing==='object'?{...existing}:(typeof n==='number'?[]:{}));cur=cur[k];}
   cur[parts[parts.length-1]]=value; return root;
 }
-function normalizeEditableText(value){return String(value||'').replace(/\u00a0/g,' ').replace(/\r/g,'').split('\n').map(x=>x.replace(/[ \t]+/g,' ').trim()).join('\n').replace(/\n{3,}/g,'\n\n').trim()}
+function normalizeEditableText(value){return String(value||'').replace(/[\u200B\uFEFF]/g,'').replace(/\u00a0/g,' ').replace(/\r/g,'').split('\n').map(x=>x.replace(/[ \t]+/g,' ').trim()).join('\n').replace(/\n{3,}/g,'\n\n').trim()}
 function dedupeEditableLines(value){
   const seen=new Set(); const out=[];
   normalizeEditableText(value).split('\n').forEach(line=>{
@@ -583,21 +583,56 @@ function editableValue(el){
 function editableCommitValue(el){
   return editableValue(el);
 }
+function placeEditableCaret(node,offset=0){
+  const sel=window.getSelection?.();
+  if(!sel)return;
+  const range=document.createRange();
+  range.setStart(node,offset);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
 function insertEditableLineBreak(el){
   el?.focus?.();
   const sel=window.getSelection?.();
   if(!sel||!sel.rangeCount)return false;
   const range=sel.getRangeAt(0);
   if(!el.contains(range.commonAncestorContainer))return false;
+  const kind=el.getAttribute('data-edit-kind');
+  const anchor=range.startContainer?.nodeType===1?range.startContainer:range.startContainer?.parentElement;
+
+  // 목록은 Enter 한 번에 다음 항목으로 바로 넘어가도록 새 li를 만듭니다.
+  if(kind==='list'){
+    const li=anchor?.closest?.('li');
+    if(li&&el.contains(li)){
+      range.deleteContents();
+      const newLi=document.createElement('li');
+      newLi.textContent='\u200B';
+      li.parentNode.insertBefore(newLi,li.nextSibling);
+      placeEditableCaret(newLi.firstChild,0);
+      return true;
+    }
+  }
+
+  // 본문 블록은 Enter 한 번에 다음 문단으로 넘어가도록 새 p를 만듭니다.
+  if(kind==='paragraphs'){
+    const p=anchor?.closest?.('p');
+    if(p&&el.contains(p)){
+      range.deleteContents();
+      const newP=document.createElement('p');
+      newP.textContent='\u200B';
+      p.parentNode.insertBefore(newP,p.nextSibling);
+      placeEditableCaret(newP.firstChild,0);
+      return true;
+    }
+  }
+
+  // span/표 셀 등 단일 텍스트 영역은 <br> 대신 실제 개행 문자로 처리합니다.
+  // zero-width marker를 함께 넣어 첫 Enter 직후에도 커서가 다음 줄에 보이게 합니다.
   range.deleteContents();
-  const br=document.createElement('br');
-  range.insertNode(br);
-  const after=document.createTextNode('');
-  br.parentNode.insertBefore(after,br.nextSibling);
-  range.setStart(after,0);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
+  const textNode=document.createTextNode('\n\u200B');
+  range.insertNode(textNode);
+  placeEditableCaret(textNode,1);
   return true;
 }
 function loadSavedData(){
@@ -779,7 +814,7 @@ function activeFontSummary(st){
   const keys=activeFontKeys(st);
   if(keys.length>1)return `${keys.length}개 글씨 영역 선택`;
   if(keys.length===1)return `선택: ${prettyFontLabel(keys[0],st.activeFontLabel)}`;
-  return '미리보기 글씨를 클릭하거나 영역을 드래그하세요';
+  return '전체 글자 크기는 문서 기본도구에서 조절합니다.';
 }
 function fontTargetCSS(st){
   const targets=st?.fontTargets||{};
@@ -803,6 +838,11 @@ function fontTargetCSS(st){
     });
   }
   return css;
+}
+function clearFontSelectionInStyle(st){
+  if(!st)return st;
+  if(!st.activeFontTarget&&!st.activeFontTargets?.length&&!st.activeFontLabel)return st;
+  return {...st,activeFontTarget:'',activeFontTargets:[],activeFontLabel:''};
 }
 function selectFontTargetInDoc(doc,setDoc,key,label){
   if(!key)return;
@@ -834,7 +874,7 @@ function resetSelectedFont(doc,setDoc){
   if(!keys.length)return;
   const targets={...(st.fontTargets||{})};
   keys.forEach(key=>delete targets[key]);
-  updateDocStyle(doc,setDoc,{...st,fontTargets:targets});
+  updateDocStyle(doc,setDoc,{...st,fontTargets:targets,activeFontTarget:'',activeFontTargets:[],activeFontLabel:''});
 }
 function updateDocStyle(doc,setDoc,patch){
   const current={...baseExtras('').style,...(doc?.style||{})};
@@ -857,13 +897,13 @@ function FontQuickControls({doc,setDoc,compact=false}){
       <button type="button" className={auto?'active auto':''} onClick={()=>updateDocStyle(doc,setDoc,cur=>({...cur,autoFit:!cur.autoFit,fontScale:cur.autoFit?(cur.fontScale||100):Math.min(Number(cur.fontScale)||100,100)}))}><b>자동 맞춤</b><small>A4에 맞게 간격 축소</small></button>
     </div>
     <div className="font-detail-row selected-font-row simple-font-select-row" aria-label="미리보기 선택 글씨 조정">
-      <span className="selected-font-summary auto-select-summary">{canAdjustSelected?activeFontSummary(st):'미리보기에서 글자를 드래그하면 선택 글자 크기를 조절할 수 있습니다.'}</span>
+      <span className="selected-font-summary auto-select-summary">{canAdjustSelected?activeFontSummary(st):'전체 글자 크기는 왼쪽 빠른 선택으로 조절합니다.'}</span>
       <label className="font-size-number"><span>크기</span><input type="number" min="7" max="18" step="0.5" disabled={!canAdjustSelected} value={selectedSize==='혼합'?'':selectedSize} placeholder={selectedSize==='혼합'?'혼합':'10'} onChange={e=>setSelectedFontSize(doc,setDoc,e.target.value)}/><em>한글 10 기준</em></label>
       <button type="button" disabled={!canAdjustSelected} onClick={()=>nudgeSelectedFont(doc,setDoc,-0.5)}>-0.5</button>
       <button type="button" disabled={!canAdjustSelected} onClick={()=>nudgeSelectedFont(doc,setDoc,0.5)}>+0.5</button>
       <button type="button" disabled={!canAdjustSelected} onClick={()=>nudgeSelectedFont(doc,setDoc,-1)}>작게</button>
       <button type="button" disabled={!canAdjustSelected} onClick={()=>nudgeSelectedFont(doc,setDoc,1)}>크게</button>
-      <button type="button" disabled={!canAdjustSelected} onClick={()=>resetSelectedFont(doc,setDoc)}>선택 초기화</button>
+      <button type="button" disabled={!canAdjustSelected} onClick={()=>resetSelectedFont(doc,setDoc)}>선택 해제</button>
       <button type="button" onClick={()=>updateDocStyle(doc,setDoc,cur=>({...cur,fontScale:100,titleScale:100,bodyScale:100,tableScale:100,listScale:100,fontTargets:{},activeFontTarget:'',activeFontTargets:[],activeFontLabel:'',autoFit:false}))}>전체 초기화</button>
     </div>
   </div>
@@ -3313,6 +3353,45 @@ function AppShell(){
   const fontDragRef=useRef(null);
   const ignoreNextFontClickRef=useRef(false);
   const doc=all[type]||withBase(type,initialData(type));
+  function clearAllPreviewFontSelections(){
+    setAll(prev=>{
+      let changed=false;
+      const next={...prev};
+      Object.entries(prev||{}).forEach(([docType,item])=>{
+        const st=item?.style||{};
+        if(st.activeFontTarget||(Array.isArray(st.activeFontTargets)&&st.activeFontTargets.length)||st.activeFontLabel){
+          changed=true;
+          next[docType]={...item,style:{...st,activeFontTarget:'',activeFontTargets:[],activeFontLabel:''}};
+        }
+      });
+      return changed?next:prev;
+    });
+  }
+  useEffect(()=>{
+    const onPointerDown=(e)=>{
+      const target=e.target;
+      if(!target?.closest)return;
+      if(previewRef.current?.contains(target)){
+        if(!target.closest('[data-font-key]')) clearAllPreviewFontSelections();
+        return;
+      }
+      if(target.closest('.ribbon-panel-글자,.font-detail-row,.font-quick-controls'))return;
+      clearAllPreviewFontSelections();
+      try{window.getSelection?.()?.removeAllRanges?.()}catch{}
+    };
+    const onKeyDown=(e)=>{
+      if(e.key==='Escape'){
+        clearAllPreviewFontSelections();
+        try{window.getSelection?.()?.removeAllRanges?.()}catch{}
+      }
+    };
+    document.addEventListener('pointerdown',onPointerDown,true);
+    document.addEventListener('keydown',onKeyDown,true);
+    return ()=>{
+      document.removeEventListener('pointerdown',onPointerDown,true);
+      document.removeEventListener('keydown',onKeyDown,true);
+    };
+  },[]);
   useEffect(()=>{
     // v2.10: 예전 저장자료나 링크에서 비슷한 이름으로 들어와도 대표 행사기획안 문서로 열리게 보정합니다.
     const aliases={'행사 및 수련회 계획안':'행사 및 수련회 기획안','수련회 계획안':'행사 및 수련회 기획안','행사 기획안':'행사 및 수련회 기획안'};
@@ -3405,11 +3484,14 @@ function AppShell(){
     if(!el||!previewRef.current?.contains(el))return;
     // 미리보기 직접 수정에서는 Enter를 명확한 줄바꿈으로 고정합니다.
     // 특히 span 기반 편집칸은 브라우저가 첫 Enter를 임시 DOM으로 처리하다가
-    // React 리렌더링 시 원래 값으로 돌아가는 일이 있어 즉시 저장까지 같이 처리합니다.
+    // React 리렌더링 시 원래 값으로 돌아가지 않도록 저장은 blur 시점으로 미룹니다.
     e.preventDefault();
     const ok=insertEditableLineBreak(el);
     if(!ok)return;
-    queueMicrotask(()=>commitPreviewEditElement(el));
+    // Enter 직후에는 바로 저장/리렌더링하지 않습니다.
+    // 그래야 첫 Enter가 즉시 다음 줄로 보이고, 이어서 입력할 수 있습니다.
+    // 실제 저장은 blur 시점에 처리됩니다.
+    setSavedAt('미리보기에서 줄바꿈을 입력했습니다');
   }
   function handlePreviewFontSelect(e){
     if(ignoreNextFontClickRef.current){ignoreNextFontClickRef.current=false;return;}
@@ -3498,6 +3580,7 @@ function AppShell(){
     const root=previewRef.current;
     const target=e.target;
     if(!root||!target?.closest)return;
+    if(!target.closest('[data-font-key]')) clearAllPreviewFontSelections();
     // v2.9: 표/일정표 내부를 클릭해도 가장 가까운 문서 섹션(data-edit-block)으로 올려서 찾습니다.
     const pathEl=target.closest('[data-edit-path]');
     // v2.22: 기본 모드에서도 미리보기 글자를 직접 수정합니다.
@@ -3545,7 +3628,7 @@ function AppShell(){
   useEffect(()=>{setFileName(exportName)},[exportName]);
   const safeFileName=sanitize(fileName||exportName);
   async function runExport(kind){if(busy)return;setBusy(kind);setSavedAt(`${kind} 만드는 중…`);try{if(kind==='PDF')await exportPDF(previewRef,exportName,safeFileName);else await exportPNG(previewRef,exportName,safeFileName);setSavedAt(`${kind} 저장을 시작했습니다`)}catch(e){console.error(`${kind} 저장 실패`,e);setSavedAt(`${kind} 저장 실패 · 다시 시도해 주세요`)}finally{setBusy('')}}
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3600,7 +3683,7 @@ const BETA_DOC_OPTIONS=['기본 공지 안내문','각부 월간행사 안내','
 const BETA_DEVICE_OPTIONS=['윈도우 PC','Mac','태블릿','스마트폰','아직 모르겠습니다'];
 
 function BetaApplyPage(){
-  const [form,setForm]=useState({name:'',church:'',role:'',email:'',documents:[],device:'',message:'',consent:false});
+  const [form,setForm]=useState({name:'',church:'',role:'',phone:'',email:'',documents:[],device:'',message:'',consent:false});
   const [status,setStatus]=useState('idle');
   const [error,setError]=useState('');
   const [saved,setSaved]=useState(null);
@@ -3639,12 +3722,14 @@ function BetaApplyPage(){
       </div>
       <div className="beta-grid two">
         <label><span>사역/직분</span><select value={form.role} onChange={e=>update('role',e.target.value)}><option value="">선택해 주세요</option>{BETA_ROLE_OPTIONS.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
-        <label><span>로그인용 이메일 *</span><input type="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="name@example.com" required /></label>
+        <label><span>연락처 *</span><input value={form.phone} onChange={e=>update('phone',e.target.value)} placeholder="010-0000-0000" required /></label>
       </div>
+      <div className="beta-grid two">
+        <label><span>로그인용 이메일 *</span><input type="email" value={form.email} onChange={e=>update('email',e.target.value)} placeholder="name@example.com" required /></label>
+        </div>
       <fieldset className="beta-checks"><legend>테스트해보고 싶은 문서</legend>{BETA_DOC_OPTIONS.map(doc=><label key={doc}><input type="checkbox" checked={form.documents.includes(doc)} onChange={()=>toggleDoc(doc)} /> <span>{doc}</span></label>)}</fieldset>
-      <label><span>주로 사용할 기기</span><select value={form.device} onChange={e=>update('device',e.target.value)}><option value="">선택해 주세요</option>{BETA_DEVICE_OPTIONS.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
       <label><span>남기고 싶은 말</span><textarea value={form.message} onChange={e=>update('message',e.target.value)} rows={4} placeholder="평소 교회 문서 작성에서 불편했던 점이나 기대하는 점을 적어주세요." /></label>
-      <label className="beta-consent"><input type="checkbox" checked={form.consent} onChange={e=>update('consent',e.target.checked)} required /> <span>베타테스트 접속 안내와 피드백 확인을 위해 이름, 교회명, 이메일 주소를 수집하는 것에 동의합니다.</span></label>
+      <label className="beta-consent"><input type="checkbox" checked={form.consent} onChange={e=>update('consent',e.target.checked)} required /> <span>베타테스트 접속 안내와 피드백 확인을 위해 이름, 교회명, 연락처, 이메일 주소를 수집하는 것에 동의합니다.</span></label>
       {error&&<div className="beta-error">{error}</div>}
       {status==='done'&&<div className="beta-success"><b>신청이 완료되었습니다.</b><br/>관리자가 승인하면 입력하신 이메일로 작성기 로그인이 가능해집니다. 신청 이메일: {saved?.email||form.email}</div>}
       <button className="beta-primary" disabled={status==='saving'}>{status==='saving'?'신청 저장 중…':'베타테스터 신청하기'}</button>
@@ -3702,7 +3787,7 @@ function BetaAdminPage(){
     <div className="beta-list">
       {apps.length===0?<div className="beta-empty">아직 불러온 신청자가 없습니다.</div>:apps.map(app=><article className={`beta-app-card status-${app.status||'pending'}`} key={app.id}>
         <header><div><b>{app.name||'(이름 없음)'}</b><span>{app.church||'교회명 없음'} · {app.role||'직분 미입력'}</span></div><em>{app.status==='approved'?'승인됨':app.status==='rejected'?'거절됨':'대기중'}</em></header>
-        <p className="beta-email">{app.email}</p>
+        <p className="beta-email">{app.email}</p>{app.phone&&<p><b>연락처</b> {app.phone}</p>}
         <p><b>희망 문서</b> {(app.documents||[]).join(', ')||'미선택'}</p>
         <p><b>사용 기기</b> {app.device||'미입력'}</p>
         {app.message&&<blockquote>{app.message}</blockquote>}

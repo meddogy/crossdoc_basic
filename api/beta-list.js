@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     checkAdminPasscode(body.passcode);
     const rows = await serviceRoleRequest('/rest/v1/beta_applications', {
       query: {
-        select: 'id,name,church,role,email,documents,device,message,status,memo,created_at,approved_at',
+        select: 'id,name,church,role,phone,email,documents,device,message,status,memo,created_at,approved_at',
         order: 'created_at.desc',
         limit: '200',
       },

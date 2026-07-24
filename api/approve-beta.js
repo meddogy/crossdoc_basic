@@ -7,7 +7,7 @@ function normalizeEmail(email) {
 async function getApplication(id) {
   const rows = await serviceRoleRequest('/rest/v1/beta_applications', {
     query: {
-      select: 'id,name,church,role,email,status',
+      select: 'id,name,church,role,phone,email,status',
       id: `eq.${id}`,
       limit: '1',
     },
@@ -43,14 +43,14 @@ export default async function handler(req, res) {
           email,
           plan: 'beta',
           active: true,
-          memo: `BASIC 1.17 베타테스터${app.church ? ` · ${app.church}` : ''}`,
+          memo: `BASIC 1.18 베타테스터${app.church ? ` · ${app.church}` : ''}`,
         },
       });
     }
 
     const updated = await serviceRoleRequest('/rest/v1/beta_applications', {
       method: 'PATCH',
-      query: { id: `eq.${id}`, select: 'id,name,church,role,email,documents,device,message,status,memo,created_at,approved_at' },
+      query: { id: `eq.${id}`, select: 'id,name,church,role,phone,email,documents,device,message,status,memo,created_at,approved_at' },
       headers: { Prefer: 'return=representation' },
       body: {
         status,

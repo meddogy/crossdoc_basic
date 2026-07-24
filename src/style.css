@@ -5543,7 +5543,7 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
   transition:outline-color .12s ease, background-color .12s ease, box-shadow .12s ease;
 }
 .v1-15-drag-font-size .preview-wrap::after{
-  content:'글씨를 클릭하면 한 영역, 드래그로 여러 줄을 선택한 뒤 크기를 조절할 수 있습니다.';
+  content:'';
   display:block;
   text-align:center;
   color:#94a3b8;
@@ -12374,3 +12374,22 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
 .beta-card-actions button:first-child{background:#0b2d5c;color:#fff;border-color:#0b2d5c}
 .beta-card-actions button.copy{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
 @media(max-width:760px){.beta-public-page{padding:18px 10px 70px}.beta-hero-card,.beta-form-card,.beta-admin-login,.beta-admin-note,.beta-empty,.beta-app-card{border-radius:22px;padding:20px}.beta-grid.two,.beta-checks,.beta-admin-login{grid-template-columns:1fr}.beta-hero-card h1,.beta-form-card h2{font-size:27px}.beta-app-card header{flex-direction:column}.beta-card-actions button{flex:1 1 130px}}
+
+
+/* BASIC 1.18: 미리보기 글씨 선택 해제와 안내 문구 정리 */
+.v1-18-selection-clear .preview-wrap::after{content:none!important;display:none!important;}
+.v1-18-selection-clear .selected-font-row{border-color:#dbeafe!important;background:#f8fafc!important;}
+.v1-18-selection-clear .selected-font-row .selected-font-summary{color:#475569!important;}
+.v1-18-selection-clear [data-font-key]{user-select:text;}
+.v1-18-selection-clear .preview-wrap [data-font-selectable="true"]{cursor:text;}
+.v1-18-selection-clear .preview-wrap:focus{outline:none;}
+
+/* BASIC 1.19: 미리보기 직접 수정 Enter 1회 줄바꿈 보강 */
+.v-basic-1-19-enter-linebreak .preview-wrap .editable-text,
+.v-basic-1-19-enter-linebreak .preview-wrap .editable-block{
+  white-space:pre-wrap!important;
+}
+.v-basic-1-19-enter-linebreak .preview-wrap .editable-block p{
+  margin-top:.18em;
+  margin-bottom:.18em;
+}

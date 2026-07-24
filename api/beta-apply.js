@@ -22,6 +22,7 @@ export default async function handler(req, res) {
     const name = cleanText(body.name, 80);
     const church = cleanText(body.church, 120);
     const role = cleanText(body.role, 80);
+    const phone = cleanText(body.phone, 80);
     const email = normalizeEmail(body.email);
     const documents = toArray(body.documents);
     const device = cleanText(body.device, 120);
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
     const consent = body.consent === true || body.consent === 'true' || body.consent === 'yes';
 
     if (!name) return sendJson(res, 400, { error: '이름을 입력해 주세요.' });
+    if (!phone) return sendJson(res, 400, { error: '연락 가능한 연락처를 입력해 주세요.' });
     if (!email || !validEmail(email)) return sendJson(res, 400, { error: '정확한 이메일 주소를 입력해 주세요.' });
     if (!consent) return sendJson(res, 400, { error: '개인정보 수집 및 베타테스트 안내에 동의해 주세요.' });
 
@@ -40,13 +42,14 @@ export default async function handler(req, res) {
       name,
       church,
       role,
+      phone,
       email,
       documents,
       device,
       message,
       consent,
       status: existing?.[0]?.status === 'approved' ? 'approved' : 'pending',
-      memo: 'BASIC 1.17 베타 신청',
+      memo: 'BASIC 1.18 베타 신청',
     };
 
     let saved;
