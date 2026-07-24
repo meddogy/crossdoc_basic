@@ -2471,9 +2471,9 @@ function MobileModeBar({stage,setStage}){
 function MobileExportPanel({busy,onPDF,onPNG,savedAt}){
   return <div className="mobile-export-panel" id="mobile-export"><div><b>저장·출력</b><span>먼저 위쪽 ‘PC·모바일 이어쓰기’에서 클라우드에 저장하고, 필요하면 PDF/PNG로 내려받으세요.</span></div><div className="mobile-export-buttons"><button type="button" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button><button type="button" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button></div>{savedAt&&<em>{savedAt}</em>}<small className="mobile-export-tip">PDF/PNG 저장은 휴대폰 기종에 따라 시간이 걸릴 수 있습니다. 중요한 출력은 PC 사용을 권장합니다.</small></div>
 }
-function MobileBottomNav({stage,setStage,onHome}){
+function MobileBottomNav({stage,setStage,onHome,onPDF,onPNG,busy}){
   const go=(next,selector)=>{setStage?.(next);setTimeout(()=>scrollToMobileTarget(selector),30)};
-  return <nav className="mobile-bottom-nav mobile-direct-export-nav mobile-easy-bottom-nav" aria-label="모바일 빠른 이동"><button type="button" onClick={onHome}>홈</button><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','.mobile-quick-edit')}>입력</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>확인</button><button type="button" className={stage==='save'?'active':''} onClick={()=>go('save','#mobile-save-area')}>저장</button></nav>
+  return <nav className="mobile-bottom-nav mobile-direct-export-nav mobile-easy-bottom-nav has-export-buttons" aria-label="모바일 빠른 이동"><button type="button" onClick={onHome}>홈</button><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','.mobile-quick-edit')}>입력</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>확인</button><button type="button" className={stage==='save'?'active':''} onClick={()=>go('save','#mobile-save-area')}>저장</button><button type="button" className="export-direct" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'…':'PDF'}</button><button type="button" className="export-direct png" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'…':'PNG'}</button></nav>
 }
 
 function FirstUsePanel({type,setType,setSelected,easyMode,setEasyMode,onPDF,onPNG,busy,savedAt}){
@@ -4117,7 +4117,7 @@ function AppShell({auth}){
           <div className={'preview-wrap '+view} ref={previewRef} onBlurCapture={handlePreviewBlur} onBeforeInputCapture={handlePreviewBeforeInput} onFocusCapture={handlePreviewFocus} onKeyDownCapture={handlePreviewEditKeyDown} onClickCapture={handlePreviewJump} onMouseDownCapture={easyMode?undefined:handlePreviewFontDragStart} onMouseUpCapture={easyMode?undefined:handlePreviewRangeFontSelect}><PreviewDirectEditContext.Provider value={true}><SelectedDocsPreview types={shownTypes} all={all} currentType={type}/></PreviewDirectEditContext.Provider></div>
         </section>
       </div>
-      <MobileBottomNav stage={mobileStage} setStage={setMobileStage} onHome={()=>setAppScreen('home')}/>
+      <MobileBottomNav stage={mobileStage} setStage={setMobileStage} onHome={()=>setAppScreen('home')} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} busy={busy}/>
     </main>
     {helpOpen&&<BuiltInGuideModal type={type} onClose={()=>setHelpOpen(false)} onJump={(selector,open)=>{setHelpOpen(false);setTimeout(()=>scrollToMobileTarget(selector,open),60)}}/>}
   </div>

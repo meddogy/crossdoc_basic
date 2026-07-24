@@ -13170,3 +13170,23 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
     bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;
   }
 }
+
+/* BASIC 1.32: 하단 탭바(홈·입력·확인·저장)에 PDF/PNG 즉시 저장 버튼 2개 추가.
+   버튼 배경색은 기존 v2.35 미사용 규칙(.export-direct)을 그대로 재활용하고,
+   6개 버튼에 맞게 grid-template-columns만 새로 지정함(기존 4열 규칙보다 더 구체적으로 지정해 덮어씀). */
+@media screen and (max-width:760px){
+  .v2-35-mobile-direct-export .mobile-bottom-nav.mobile-direct-export-nav.has-export-buttons{
+    grid-template-columns:repeat(6,1fr)!important;
+    gap:4px!important;
+  }
+  .v2-35-mobile-direct-export .mobile-bottom-nav.mobile-direct-export-nav.has-export-buttons button{
+    font-size:10px!important;
+    padding-left:1px!important;
+    padding-right:1px!important;
+  }
+}
+@media screen and (max-width:390px){
+  .v2-35-mobile-direct-export .mobile-bottom-nav.mobile-direct-export-nav.has-export-buttons button{
+    font-size:9px!important;
+  }
+}
