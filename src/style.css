@@ -13121,3 +13121,31 @@ html, body, #root, .app, .editor, .preview-pane, .preview-wrap, .page, .page *{
     font-size:11px!important;
   }
 }
+
+/* BASIC 1.28: 주간보고서 출석/참여 자유 입력 */
+.attendance-text-cell{
+  display:block;
+  max-width:100%;
+  color:var(--primary);
+  font-weight:850;
+  line-height:1.22;
+  text-align:center;
+  white-space:pre-wrap;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+.attendance-text-edit{
+  display:inline;
+  font-size:.95em!important;
+  letter-spacing:-.03em;
+}
+.info .attendance-text-cell{
+  text-align:left;
+  margin-top:4px;
+}
+.v-basic-1-28-attendance-free-text .weekly-status-table .weekly-attendance{
+  min-width:72px;
+}
+.v-basic-1-28-attendance-free-text .field input[type=number][data-attendance-field]{
+  -moz-appearance:textfield;
+}
