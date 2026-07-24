@@ -2416,7 +2416,7 @@ function GenericEditor({type,doc,setDoc,selectedTypes=[],allDocs,setAllDocs}){co
   <div className="easy-detail-note v238-detail-note">기본 작성은 위 페이지별 수정판에서 끝내고, 문서가 잘리거나 여백을 조정해야 할 때만 아래 설정을 여세요.</div>
 </div>}
 function QuickGuide(){return <div className="quick-guide"><b>10분 작성 순서</b><span>1 문서 선택</span><span>2 내용 입력</span><span>3 미리보기 확인</span><span>4 PDF/PNG 저장</span></div>}
-function MobileNotice(){return <div className="mobile-notice"><b>모바일 안내</b><span>모바일에서는 문서 선택을 먼저 하고, 내용 입력 후 미리보기를 확인해 주세요. 표가 많은 문서는 PC·태블릿 편집을 권장합니다.</span></div>}
+function MobileNotice(){return <div className="mobile-notice"><b>모바일 간편모드</b><span>휴대폰에서는 ①문서 선택 ②핵심 입력 ③미리보기 ④저장 순서만 보이게 정리했습니다. 세부 편집은 필요할 때만 열어 주세요.</span></div>}
 function MobileDocPicker({type,setType,setSelected,setStage}){
   const [query,setQuery]=useState('');
   const favorites=['기본 공지 안내문','각부 월간행사 안내','부서별 주간보고서','부서 통합 주간보고서','행사 및 수련회 기획안'];
@@ -2428,6 +2428,22 @@ function MobileDocPicker({type,setType,setSelected,setStage}){
     <label className="mobile-search-wrap"><span>문서 검색</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="예: 월간행사, 주간보고" /></label>
     <label className="mobile-select-wrap"><span>전체 양식</span><select value={type} onChange={e=>changeDoc(e.target.value)}>{CATEGORIES.map(cat=><optgroup key={cat.name} label={cat.name}>{cat.types.map(t=><option key={t} value={t}>{t}</option>)}</optgroup>)}</select></label>
     <div className="mobile-current-doc">현재 선택: <b>{type}</b></div></div>}
+
+function MobileQuickStartPanel({type,setStage,onHome}){
+  const steps=[
+    {key:'write',label:'1 입력',desc:'내용 먼저 채우기',selector:'.mobile-quick-edit'},
+    {key:'preview',label:'2 확인',desc:'A4 미리보기',selector:'.preview-pane'},
+    {key:'save',label:'3 저장',desc:'클라우드·PDF/PNG',selector:'#mobile-save-area'}
+  ];
+  function go(step){
+    setStage?.(step.key);
+    setTimeout(()=>scrollToMobileTarget(step.selector),40);
+  }
+  return <section className="mobile-work-hub" aria-label="모바일 작업 홈">
+    <div className="mobile-work-head"><div><em>모바일 간편 사용</em><b>{type}</b><span>휴대폰에서는 자주 쓰는 항목만 크게 보여드립니다.</span></div><button type="button" onClick={onHome}>홈</button></div>
+    <div className="mobile-work-steps">{steps.map(step=><button type="button" key={step.key} onClick={()=>go(step)}><strong>{step.label}</strong><small>{step.desc}</small></button>)}</div>
+  </section>
+}
 
 function getByPath(obj,path){
   if(!path)return '';
@@ -2441,14 +2457,14 @@ function scrollToMobileTarget(selector,openDrawer=false){
 }
 function MobileModeBar({stage,setStage}){
   const go=(next,selector)=>{setStage?.(next);setTimeout(()=>scrollToMobileTarget(selector),30)};
-  return <div className="mobile-mode-bar mobile-unified-bar mobile-stage-tabs"><div><b>모바일 작업 순서</b><span>작성은 작성 화면에서, 확인은 미리보기에서 보고 저장은 하단 PDF/PNG 버튼을 바로 누릅니다.</span></div><div><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','#mobile-docs')}>작성</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>미리보기</button></div></div>
+  return <div className="mobile-mode-bar mobile-unified-bar mobile-stage-tabs"><div><b>모바일 작업 순서</b><span>입력 → 확인 → 저장 순서로 화면을 나눴습니다. 아래 버튼으로 바로 이동할 수 있습니다.</span></div><div><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','.mobile-quick-edit')}>입력</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>미리보기</button><button type="button" className={stage==='save'?'active':''} onClick={()=>go('save','#mobile-save-area')}>저장</button></div></div>
 }
 function MobileExportPanel({busy,onPDF,onPNG,savedAt}){
-  return <div className="mobile-export-panel" id="mobile-export"><div><b>저장·출력</b><span>모바일에서 바로 찾기 쉽도록 PDF/PNG 저장 버튼을 따로 모았습니다.</span></div><div className="mobile-export-buttons"><button type="button" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button><button type="button" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button></div>{savedAt&&<em>{savedAt}</em>}</div>
+  return <div className="mobile-export-panel" id="mobile-export"><div><b>저장·출력</b><span>먼저 위쪽 ‘PC·모바일 이어쓰기’에서 클라우드에 저장하고, 필요하면 PDF/PNG로 내려받으세요.</span></div><div className="mobile-export-buttons"><button type="button" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF 만드는 중…':'PDF 저장'}</button><button type="button" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG 만드는 중…':'PNG 저장'}</button></div>{savedAt&&<em>{savedAt}</em>}<small className="mobile-export-tip">PDF/PNG 저장은 휴대폰 기종에 따라 시간이 걸릴 수 있습니다. 중요한 출력은 PC 사용을 권장합니다.</small></div>
 }
-function MobileBottomNav({stage,setStage,onPDF,onPNG,busy}){
+function MobileBottomNav({stage,setStage,onHome}){
   const go=(next,selector)=>{setStage?.(next);setTimeout(()=>scrollToMobileTarget(selector),30)};
-  return <nav className="mobile-bottom-nav mobile-direct-export-nav" aria-label="모바일 빠른 이동"><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','#mobile-docs')}>작성</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>미리보기</button><button type="button" className="export-direct pdf" disabled={!!busy} onClick={onPDF}>{busy==='PDF'?'PDF중…':'PDF 저장'}</button><button type="button" className="export-direct png" disabled={!!busy} onClick={onPNG}>{busy==='PNG'?'PNG중…':'PNG 저장'}</button></nav>
+  return <nav className="mobile-bottom-nav mobile-direct-export-nav mobile-easy-bottom-nav" aria-label="모바일 빠른 이동"><button type="button" onClick={onHome}>홈</button><button type="button" className={stage==='write'?'active':''} onClick={()=>go('write','.mobile-quick-edit')}>입력</button><button type="button" className={stage==='preview'?'active':''} onClick={()=>go('preview','.preview-pane')}>확인</button><button type="button" className={stage==='save'?'active':''} onClick={()=>go('save','#mobile-save-area')}>저장</button></nav>
 }
 
 function FirstUsePanel({type,setType,setSelected,easyMode,setEasyMode,onPDF,onPNG,busy,savedAt}){
@@ -3194,7 +3210,7 @@ function CloudSyncPanel({auth,all,setAll,type,setType,bundleTypes,setBundleTypes
     finally{setLoading(false);}
   }
   useEffect(()=>{if(open&&hasSession&&docs.length===0)refresh();},[open]);
-  return <section className="cloud-sync-panel" aria-label="PC 모바일 이어쓰기">
+  return <section className="cloud-sync-panel" id="mobile-save-area" aria-label="PC 모바일 이어쓰기">
     <div className="cloud-sync-head">
       <div><b>PC·모바일 이어쓰기</b><span>같은 이메일로 로그인하면 내 문서를 클라우드에 저장하고 다른 기기에서 불러올 수 있습니다.</span></div>
       <div className="cloud-sync-actions"><button type="button" onClick={()=>setOpen(v=>!v)}>{open?'내 문서 닫기':'내 문서 열기'}</button><button type="button" className="primary" disabled={loading||!hasSession} onClick={()=>saveCloud(false)}>{loading?'처리 중…':(cloudId?'클라우드 저장':'새 문서 저장')}</button></div>
@@ -3932,7 +3948,7 @@ function AppShell({auth}){
     setAppScreen('writer');
   }
   if(appScreen==='home')return <ProductDashboard auth={auth} currentType={type} recentDocs={recentDocs} onOpenDoc={openDashboardDoc} onOpenWriter={()=>setAppScreen('writer')} onLoadDocument={loadDashboardCloudDocument}/>;
-  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-24-otp-login v-basic-1-23-dashboard-stable v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
+  return <div className={`app basic-product-app v61-simple-compose v62-polished-ui v63-layout-fix v98-schedule-day-editor v99-preview-sync-layout v100-a4-editor-stabilize v101-edit-spacing-stable v102-schedule-draft-confirm v103-input-mobile-fix v104-cuesheet-schedule-plan-fix v105-final-layout-fix v106-plan-cue-final v107-final-schedule-polish v108-prep-a4-safe v109-page-section-add v110-page-delete v111-result-preview-fix v114-intuitive-input-panel v117-schedule-preset-cleanup v118-preview-toolbar v1-1-mobile-simple v1-2-mobile-unified v1-3-korean-input-stable v1-4-export-size-stable v1-9-monthly-line-editor v1-10-global-font-scale v1-11-hwp-ribbon v1-12-export-font-lock v1-13-preview-font-select v1-14-ribbon-menu-plus v1-15-drag-font-size v1-16-clean-ribbon-design v1-17-practical-design-drag v1-18-selection-clear v1-18-monthly-prayer-lines v1-19-simple-preview-edit v1-22-ribbon-font-compact v1-23-auto-font-select v1-24-font-target-all v1-25-table-font-adjust v1-26-edit-linebreak-stable v1-27-edu-attendance-number v1-28-kakao-modern v1-29-program-hwp-menu v1-30-first-use-friendly v1-31-simple-workflow v1-32-stable-admin v1-33-input-stability v1-34-smart-organize v1-35-smart-schema v1-36-admin-fast v1-37-universal-compose v2-admin-zero-error v2-1-pro-sample v2-2-preview-focused v2-3-page-tabs v2-4-preview-linked v2-4-mobile-lite v2-5-page-editor v2-6-block-editor v2-7-block-link v2-8-admin-forms v2-9-preview-a4-fix v2-10-no-page-scroll v2-10-doc-open-fix v2-11-scroll-lock v2-11-plan-open-fix v2-11-2-a4-program-fix v2-11-3-preview-click-fix v2-13-monthly-a4-safe v2-14-annual-form-fix v2-15-monthly-onepage-fit v2-16-monthly-fuller-onepage v2-17-onepage-autofit v2-18-monthly-5-full-sample v2-19-editor-panel-stable v2-20-preview-edit-safe v2-22-tools-panel-simple v2-23-monthly-onepage-polish v2-24-monthly-usability v2-25-monthly-period-date v2-26-editor-tools-monthly-split v2-27-pdf-monthly-input-emoji v2-28-work-tools-overlap-fix v2-29-schedule-editor-more-fix v2-30-schedule-editor-fit v2-31-schedule-font-control v2-32-mobile-flow v2-33-mobile-top-actions-fix v2-34-mobile-simple-docs v2-35-mobile-direct-export v2-36-mobile-quick-write v2-37-editor-stability v-basic-1-26-mobile-easy v-basic-1-24-otp-login v-basic-1-23-dashboard-stable v-basic-1-20-cloud-sync v-basic-1-19-enter-linebreak v-basic-1-16-guide-built-in v-basic-1-15-sales-ready v-basic-1-14-schedule-time-readable v-basic-1-13-final-polish v-basic-1-12-usability-final v-basic-1-11-final-stabilize v-basic-1-9-editor-layout-fix v-basic-1-8-time-weekly-fix v-basic-1-7-schedule-select-time v-basic-1-6-schedule-time-polish v-basic-1-5-schedule-dept-polish v-basic-1-4-complete-set v-basic-1-2-pwa-usability v-basic-1-0-8-email-auth v-basic-1-0-7-unified-design mobile-stage-${mobileStage} ${easyMode?'easy-mode':'advanced-mode'} ${mobileSimple?'mobile-simple-on':'mobile-detail-on'}`}> 
     <aside className="sidebar">
       <div className="brand"><b>교회문서키트</b><span>BASIC 작성기</span></div>
       <div className="select-help"><b>문서 선택</b><span>공지문·월간행사·주간보고·수련회 기획안 5종을 제공합니다.</span></div><AssistantStartPanel type={type} setType={setType} setSelected={setBundleTypes} recentDocs={recentDocs}/>
@@ -3963,6 +3979,7 @@ function AppShell({auth}){
           </>}
         </div>
       </div>
+      <MobileQuickStartPanel type={type} setStage={setMobileStage} onHome={()=>setAppScreen('home')}/>
       <CloudSyncPanel auth={auth} all={all} setAll={setAll} type={type} setType={setType} bundleTypes={bundleTypes} setBundleTypes={setBundleTypes} setSavedAt={setSavedAt}/>
       <FirstUsePanel type={type} setType={setType} setSelected={setBundleTypes} easyMode={easyMode} setEasyMode={setEasyMode} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')} savedAt={savedAt}/>
       <MobileDocPicker type={type} setType={setType} setSelected={setBundleTypes} setStage={setMobileStage}/>
@@ -3977,7 +3994,7 @@ function AppShell({auth}){
           <div className={'preview-wrap '+view} ref={previewRef} onBlurCapture={handlePreviewBlur} onBeforeInputCapture={handlePreviewBeforeInput} onFocusCapture={handlePreviewFocus} onKeyDownCapture={handlePreviewEditKeyDown} onClickCapture={handlePreviewJump} onMouseDownCapture={easyMode?undefined:handlePreviewFontDragStart} onMouseUpCapture={easyMode?undefined:handlePreviewRangeFontSelect}><PreviewDirectEditContext.Provider value={true}><SelectedDocsPreview types={shownTypes} all={all} currentType={type}/></PreviewDirectEditContext.Provider></div>
         </section>
       </div>
-      <MobileBottomNav stage={mobileStage} setStage={setMobileStage} busy={busy} onPDF={()=>runExport('PDF')} onPNG={()=>runExport('PNG')}/>
+      <MobileBottomNav stage={mobileStage} setStage={setMobileStage} onHome={()=>setAppScreen('home')}/>
     </main>
     {helpOpen&&<BuiltInGuideModal type={type} onClose={()=>setHelpOpen(false)} onJump={(selector,open)=>{setHelpOpen(false);setTimeout(()=>scrollToMobileTarget(selector,open),60)}}/>}
   </div>
