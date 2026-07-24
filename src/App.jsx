@@ -8,12 +8,12 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.24 모바일 안정 로그인판: Magic Link 대신 6자리 이메일 인증코드 입력 방식으로 모바일 로그인 안정성을 개선
-// 브라우저가 Supabase로 직접 요청하지 않고, 같은 도메인의 /api를 통해 인증 코드를 요청/검증합니다.
+// BASIC 1.24.2 기본 Supabase 메일 호환판: Free/Hobby 환경에서 이메일 템플릿 수정이 막힌 경우에도 기본 Magic Link 로그인으로 작동하도록 복구
+// Custom SMTP를 설정하기 전까지는 6자리 코드가 아니라 Supabase 기본 Sign in 링크를 사용합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
-  mode:'Vercel API proxy + email OTP code + persistent refresh session + PWA',
-  note:'기기별 최초 로그인은 6자리 인증코드로 처리하고 이후 refresh token으로 세션을 자동 갱신합니다.'
+  mode:'Vercel API proxy + default Magic Link + persistent refresh session + PWA',
+  note:'Supabase 이메일 템플릿 수정이 막혀 있어도 기본 Sign in 링크로 로그인합니다. 같은 기기에서는 이후 refresh token으로 세션을 자동 갱신합니다.'
 };
 function readableSupabaseError(error){
   const parts=[];
@@ -113,18 +113,12 @@ async function deleteCloudDocument(session,id){
   return apiPost('/api/user-docs',{action:'delete',access_token:session?.access_token,id});
 }
 
-async function requestLoginCode(email){
+async function requestLoginEmail(email){
   const clean=normalizeEmail(email);
   if(!clean)throw new Error('이메일을 입력해 주세요.');
   return apiPost('/api/send-login-link',{email:clean,redirectTo:authRedirectUrl()});
 }
-async function verifyLoginCode(email,token){
-  const clean=normalizeEmail(email);
-  const code=String(token||'').trim().replace(/\s+/g,'');
-  if(!clean)throw new Error('이메일을 입력해 주세요.');
-  if(!/^\d{6}$/.test(code))throw new Error('메일에 도착한 6자리 숫자 코드를 입력해 주세요.');
-  return apiPost('/api/verify-login-code',{email:clean,token:code});
-}
+
 async function requestRefreshSession(session){
   const refreshToken=String(session?.refresh_token||'').trim();
   if(!refreshToken)throw new Error('저장된 갱신 토큰이 없습니다. 다시 로그인해 주세요.');
@@ -262,7 +256,6 @@ function AuthGate({children}){
   const sessionRef=useRef(null);
   const [formEmail,setFormEmail]=useState('');
   const [otpEmail,setOtpEmail]=useState('');
-  const [otpCode,setOtpCode]=useState('');
   const [copiedAddress,setCopiedAddress]=useState(false);
   useEffect(()=>{ sessionRef.current=session; },[session]);
   useEffect(()=>{
@@ -331,51 +324,15 @@ function AuthGate({children}){
     if(!clean){setError('구매 시 등록한 이메일을 입력해 주세요.');return;}
     setStatus('sending');
     try{
-      await requestLoginCode(clean);
+      await requestLoginEmail(clean);
       setOtpEmail(clean);
       setFormEmail(clean);
-      setOtpCode('');
       setStatus('emailSent');
-      setMessage(`${clean} 주소로 6자리 인증코드를 보냈습니다. 메일 앱에서 코드를 확인한 뒤, 이 화면으로 돌아와 숫자 6자리를 입력해 주세요.`);
+      setMessage(`${clean} 주소로 로그인 인증 메일을 보냈습니다. 메일의 Sign in 링크를 이 기기의 Safari/Chrome에서 열어 주세요. 이미 누른 링크는 다시 쓰지 말고, 새 메일이 도착할 때까지 잠시 기다려 주세요.`);
     }catch(e){
       console.error(e);
       setStatus('signedOut');
-      setError('인증 코드 발송에 실패했습니다. 아래 상세 오류를 확인해 주세요.');
-      setErrorDetail(readableSupabaseError(e));
-    }
-  }
-  async function confirmLoginCode(e){
-    e?.preventDefault?.();
-    setError('');setErrorDetail('');setMessage('');
-    const clean=normalizeEmail(otpEmail||formEmail);
-    const code=String(otpCode||'').trim().replace(/\s+/g,'');
-    if(!clean){setError('구매 시 등록한 이메일을 입력해 주세요.');return;}
-    if(!/^\d{6}$/.test(code)){setError('메일에 도착한 6자리 숫자 코드를 입력해 주세요.');return;}
-    setStatus('sending');
-    try{
-      const result=await verifyLoginCode(clean,code);
-      const raw=result?.session||result;
-      if(!raw?.access_token)throw new Error('인증은 처리되었지만 로그인 세션을 받지 못했습니다.');
-      const next={
-        access_token:raw.access_token,
-        refresh_token:raw.refresh_token||'',
-        token_type:raw.token_type||'bearer',
-        expires_at:Date.now()+Number(raw.expires_in||3600)*1000,
-        user:raw.user||null
-      };
-      writeAuthSession(next);
-      sessionRef.current=next;
-      setSession(next);
-      const user=await getAuthUser(next);
-      const userEmail=normalizeEmail(user?.email||clean);
-      const allowed=await checkAllowedBuyer(userEmail,next);
-      setEmail(userEmail);
-      if(allowed){setBuyer(allowed);setStatus('allowed');setMessage('');setOtpCode('');}
-      else{setBuyer(null);setStatus('notAllowed');}
-    }catch(e){
-      console.error(e);
-      setStatus('emailSent');
-      setError('인증 코드 확인에 실패했습니다. 코드를 다시 확인해 주세요.');
+      setError('로그인 인증 메일 발송에 실패했습니다. 아래 상세 오류를 확인해 주세요.');
       setErrorDetail(readableSupabaseError(e));
     }
   }
@@ -395,7 +352,7 @@ function AuthGate({children}){
   if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
   if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
   if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={status==='emailSent'?confirmLoginCode:sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>승인된 이메일로 기기별 최초 1회만 인증해 주세요. 모바일에서는 메일 링크를 누르지 않고, 메일에 온 <b>6자리 코드</b>를 이 화면에 입력하면 됩니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'||status==='emailSent'}/></label>{status==='emailSent'&&<label className="auth-field"><span>이메일 인증코드</span><input type="text" value={otpCode} onChange={e=>setOtpCode(e.target.value.replace(/\D/g,'').slice(0,6))} placeholder="6자리 숫자" inputMode="numeric" autoComplete="one-time-code" disabled={status==='sending'}/></label>}<button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'처리 중…':status==='emailSent'?'6자리 코드 확인':'인증 코드 받기'}</button>{status==='emailSent'&&<div className="auth-actions"><button type="button" onClick={sendLogin} disabled={status==='sending'}>코드 다시 받기</button><button type="button" onClick={()=>{setStatus('signedOut');setOtpEmail('');setOtpCode('');setMessage('');setError('');setErrorDetail('');}}>이메일 다시 입력</button></div>}{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요. 같은 기기에서는 다음부터 인증코드를 다시 받지 않아도 됩니다. 공용 PC에서만 로그아웃하세요.</small></form></div>;
+  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>승인된 이메일로 기기별 최초 1회만 로그인해 주세요. 현재 Supabase 이메일 템플릿 수정이 막혀 있어 <b>기본 Sign in 링크</b> 방식으로 로그인합니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'처리 중…':status==='emailSent'?'로그인 인증 메일 다시 받기':'로그인 인증 메일 받기'}</button>{status==='emailSent'&&<div className="auth-mobile-help"><b>모바일에서 여는 방법</b><ol><li>메일 앱에서 새로 도착한 Supabase Sign in 메일을 엽니다.</li><li>Sign in 링크를 길게 누른 뒤 Safari 또는 Chrome에서 열어 주세요.</li><li>PC에서 받은 링크를 모바일에서 다시 누르지 마세요. 기기별로 새 메일을 받아야 안정적입니다.</li></ol><button type="button" onClick={()=>{setStatus('signedOut');setOtpEmail('');setMessage('');setError('');setErrorDetail('');}}>이메일 다시 입력</button></div>}{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요. 같은 기기에서는 다음부터 인증 메일을 다시 받지 않아도 됩니다. 공용 PC에서만 로그아웃하세요.</small></form></div>;
   const authInfo={email,buyer,session,signOut};
   return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>이 기기 자동 로그인 유지 중</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 이 기기에서는 다음 접속 시 이메일 링크 인증이 다시 필요합니다. 개인 기기라면 로그아웃하지 않는 것을 권장합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{React.isValidElement(children)?React.cloneElement(children,{auth:authInfo}):children}</>;
 }
@@ -3376,7 +3333,7 @@ function DashboardSettingsPanel({auth,onOpenWriter}){
       <article><h3>개인 기기 사용</h3><p>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요.</p><small>같은 기기에서는 세션이 유지되어 다시 접속이 쉬워집니다.</small></article>
       <article><h3>공용 PC 사용</h3><p>교회 공용 PC나 다른 사람의 기기에서는 사용 후 로그아웃해 주세요.</p><small>개인정보와 문서 내용을 보호하기 위한 설정입니다.</small></article>
       <article><h3>클라우드 저장</h3><p>내 문서 저장을 쓰려면 Supabase SQL Editor에서 user_documents 테이블을 먼저 만들어야 합니다.</p><small>파일: supabase_cloud_documents.sql</small></article>
-      <article><h3>모바일 로그인</h3><p>새 휴대폰이나 새 브라우저에서는 최초 1회 이메일 인증이 필요합니다.</p><small>메일 발송 한도 문제가 반복되면 Custom SMTP 설정이 필요합니다.</small></article>
+      <article><h3>모바일 로그인</h3><p>새 휴대폰이나 새 브라우저에서는 최초 1회 이메일 Sign in 링크 인증이 필요합니다.</p><small>메일 발송 한도 문제가 반복되거나 6자리 코드 로그인을 쓰려면 Custom SMTP 설정이 필요합니다.</small></article>
       <article><h3>출력 권장 환경</h3><p>PDF/PNG 저장은 PC 또는 노트북 환경이 가장 안정적입니다.</p><small>모바일은 신청·확인·간단 수정 용도로 권장합니다.</small></article>
     </div>
   </section>

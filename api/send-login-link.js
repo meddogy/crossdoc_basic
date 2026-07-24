@@ -26,7 +26,7 @@ async function sendOtp(email, redirectTo) {
     body: {
       email,
       create_user: true,
-      data: { source: 'church-docs-kit-basic', version: '1.24-otp' },
+      data: { source: 'church-docs-kit-basic', version: '1.24.2-magic-link-compatible' },
     },
   });
 }
@@ -42,23 +42,23 @@ export default async function handler(req, res) {
     if (!email) return sendJson(res, 400, { error: '이메일을 입력해 주세요.' });
     redirectTo = safeRedirect(req, body.redirectTo);
 
-    console.log('[send-login-code] start', { email, redirectTo, diag: diagnostics({ origin: requestOrigin(req) }) });
+    console.log('[send-login-email] start', { email, redirectTo, diag: diagnostics({ origin: requestOrigin(req) }) });
     const result = await sendOtp(email, redirectTo);
-    console.log('[send-login-code] success', { email, redirectTo, elapsedMs: Date.now() - startedAt });
+    console.log('[send-login-email] success', { email, redirectTo, elapsedMs: Date.now() - startedAt });
 
     return sendJson(res, 200, { ok: true, email, redirectTo, result: result || null, diagnostics: diagnostics({ redirectTo }) });
   } catch (error) {
     const info = serializeError(error, { email, redirectTo, origin: requestOrigin(req) });
-    console.error('[send-login-code] failed', JSON.stringify(info, null, 2));
+    console.error('[send-login-email] failed', JSON.stringify(info, null, 2));
     return sendJson(res, error.status || 500, {
-      error: '인증 코드 발송에 실패했습니다.',
+      error: '로그인 인증 메일 발송에 실패했습니다.',
       detail: info.message,
       status: error.status || 500,
       cause: info.cause,
       supabaseStatus: error.status || 500,
       supabaseMessage: info.payload?.message || info.payload?.msg || info.payload?.error_description || info.payload?.error || '',
       diagnostics: info.diagnostics,
-      troubleshooting: 'Vercel Logs에서 [send-login-code] failed 로그를 열어 message, cause, payload를 확인해 주세요. Supabase 이메일 템플릿에 {{ .Token }}이 포함되어 있어야 6자리 코드 메일이 발송됩니다.',
+      troubleshooting: 'Vercel Logs에서 [send-login-email] failed 로그를 열어 message, cause, payload를 확인해 주세요. Supabase 이메일 템플릿에 {{ .Token }}이 포함되어 있어야 6자리 코드 메일이 발송됩니다.',
     });
   }
 }
