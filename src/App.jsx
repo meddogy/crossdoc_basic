@@ -3209,8 +3209,37 @@ async function renderExportPage(page){
     return {canvas,isLand};
   }finally{stage.remove()}
 }
-async function exportPDF(previewRef,type,fileName){const pages=exportPages(previewRef.current);if(!pages.length)throw new Error('저장할 페이지가 없습니다.');const base=sanitize(fileName||type);let pdf=null;for(let i=0;i<pages.length;i++){const {canvas,isLand}=await renderExportPage(pages[i]);const img=canvas.toDataURL('image/png');const orient=isLand?'l':'p';const w=isLand?297:210,h=isLand?210:297;if(!pdf)pdf=new jsPDF(orient,'mm','a4');else pdf.addPage('a4',orient);pdf.addImage(img,'PNG',0,0,w,h,undefined,'FAST');}pdf.save(`${base}.pdf`)}
-async function exportPNG(previewRef,type,fileName){const pages=exportPages(previewRef.current);if(!pages.length)throw new Error('저장할 페이지가 없습니다.');const base=sanitize(fileName||type);for(let i=0;i<pages.length;i++){const {canvas}=await renderExportPage(pages[i]);const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download=pages.length===1?`${base}.png`:`${base}-${i+1}.png`;a.click();}}
+async function tryShareFiles(files,{title,text}={}){
+  if(!files.length||!navigator.share)return false;
+  try{
+    if(navigator.canShare && !navigator.canShare({files}))return false;
+    await navigator.share({files,title,text});
+    return true;
+  }catch(e){
+    return false; // 사용자가 취소했거나 공유가 실패하면 다운로드로 대체합니다.
+  }
+}
+async function dataUrlToFile(dataUrl,filename,mime){
+  const res=await fetch(dataUrl);
+  const blob=await res.blob();
+  return new File([blob],filename,{type:mime||blob.type});
+}
+async function exportPDF(previewRef,type,fileName){const pages=exportPages(previewRef.current);if(!pages.length)throw new Error('저장할 페이지가 없습니다.');const base=sanitize(fileName||type);let pdf=null;for(let i=0;i<pages.length;i++){const {canvas,isLand}=await renderExportPage(pages[i]);const img=canvas.toDataURL('image/png');const orient=isLand?'l':'p';const w=isLand?297:210,h=isLand?210:297;if(!pdf)pdf=new jsPDF(orient,'mm','a4');else pdf.addPage('a4',orient);pdf.addImage(img,'PNG',0,0,w,h,undefined,'FAST');}
+  if(navigator.share){
+    try{
+      const file=new File([pdf.output('blob')],`${base}.pdf`,{type:'application/pdf'});
+      if(await tryShareFiles([file],{title:base,text:`${type} PDF 파일입니다.`}))return;
+    }catch{}
+  }
+  pdf.save(`${base}.pdf`)}
+async function exportPNG(previewRef,type,fileName){const pages=exportPages(previewRef.current);if(!pages.length)throw new Error('저장할 페이지가 없습니다.');const base=sanitize(fileName||type);const canvases=[];for(let i=0;i<pages.length;i++){canvases.push((await renderExportPage(pages[i])).canvas);}
+  if(navigator.share){
+    try{
+      const files=await Promise.all(canvases.map((canvas,i)=>dataUrlToFile(canvas.toDataURL('image/png'),pages.length===1?`${base}.png`:`${base}-${i+1}.png`,'image/png')));
+      if(await tryShareFiles(files,{title:base,text:`${type} 이미지입니다.`}))return;
+    }catch{}
+  }
+  canvases.forEach((canvas,i)=>{const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download=pages.length===1?`${base}.png`:`${base}-${i+1}.png`;a.click();});}
 function encodeSharePayload(payload){return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))}
 function decodeSharePayload(text){return JSON.parse(decodeURIComponent(escape(atob(text))))}
 
@@ -3270,6 +3299,30 @@ function CloudSyncPanel({auth,all,setAll,type,setType,bundleTypes,setBundleTypes
     }catch(e){setMessage(readableSupabaseError(e));}
     finally{setLoading(false);}
   }
+  async function duplicateOne(doc){
+    if(!hasSession)return;
+    setLoading(true);setMessage('복제하는 중입니다…');
+    try{
+      const data=await loadCloudDocument(auth.session,doc.id);
+      const loaded=data?.document;
+      if(!loaded?.data)throw new Error('문서 데이터가 없습니다.');
+      const newTitle=`${loaded.title||doc.title||'문서'} 복사본`;
+      const saved=await saveCloudDocument(auth.session,{id:'',title:newTitle,doc_type:loaded.doc_type,bundle_types:loaded.bundle_types,data:loaded.data});
+      const savedDoc=saved?.document||{};
+      const merged=merge(loaded.data);
+      setAll(merged);
+      const nextType=loaded.doc_type||type;
+      setType(nextType);
+      setBundleTypes(Array.isArray(loaded.bundle_types)&&loaded.bundle_types.length?loaded.bundle_types:[nextType]);
+      if(savedDoc.id){setCloudId(savedDoc.id);try{localStorage.setItem('church-docs-kit-basic-v1-cloud-doc-id',savedDoc.id)}catch{}}
+      if(savedDoc.title){setTitle(savedDoc.title);try{localStorage.setItem('church-docs-kit-basic-v1-cloud-title',savedDoc.title)}catch{}}
+      saveToStorage(merged);
+      setMessage('복제 완료 · 날짜·기간만 바꿔서 다시 저장하세요.');
+      setSavedAt?.('문서를 복제했습니다');
+      await refresh();
+    }catch(e){setMessage(readableSupabaseError(e));}
+    finally{setLoading(false);}
+  }
   async function removeOne(doc){
     if(!hasSession)return;
     if(!confirm(`“${doc.title}” 문서를 클라우드 목록에서 삭제할까요?\n현재 기기에 저장된 내용은 삭제되지 않습니다.`))return;
@@ -3291,7 +3344,7 @@ function CloudSyncPanel({auth,all,setAll,type,setType,bundleTypes,setBundleTypes
       <div className="cloud-doc-list">
         {docs.length===0?<div className="cloud-empty">아직 클라우드에 저장된 문서가 없습니다.</div>:docs.map(d=><article key={d.id} className={cloudId===d.id?'active':''}>
           <div><b>{d.title||'제목 없음'}</b><span>{d.doc_type||'문서'} · {cloudDate(d.updated_at)}</span></div>
-          <div className="cloud-doc-actions"><button type="button" onClick={()=>loadOne(d)}>불러오기</button><button type="button" onClick={()=>removeOne(d)}>삭제</button></div>
+          <div className="cloud-doc-actions"><button type="button" onClick={()=>loadOne(d)}>불러오기</button><button type="button" onClick={()=>duplicateOne(d)}>복제</button><button type="button" onClick={()=>removeOne(d)}>삭제</button></div>
         </article>)}
       </div>
     </div>}
