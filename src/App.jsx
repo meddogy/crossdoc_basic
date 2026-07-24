@@ -8,12 +8,12 @@ const STORAGE='church-docs-kit-basic-v1-data';
 const LEGACY_STORAGE_KEYS=['church-docs-workshop-v46-data','church-docs-workshop-v45-data','church-docs-workshop-v44-data','church-docs-workshop-v43-data'];
 const A4={w:794,h:1123};
 
-// BASIC 1.24.2 기본 Supabase 메일 호환판: Free/Hobby 환경에서 이메일 템플릿 수정이 막힌 경우에도 기본 Magic Link 로그인으로 작동하도록 복구
-// Custom SMTP를 설정하기 전까지는 6자리 코드가 아니라 Supabase 기본 Sign in 링크를 사용합니다.
+// BASIC 1.25 모바일 안정 접속코드판: Supabase 이메일 Sign in 링크 없이 승인 이메일 + 접속코드로 로그인합니다.
+// 베타 단계에서는 BETA_ACCESS_CODE 환경변수 하나로 PC와 모바일 접속을 안정화합니다.
 const AUTH_STORAGE='church-docs-kit-basic-v1-auth-session';
 const AUTH_DEBUG_INFO={
-  mode:'Vercel API proxy + default Magic Link + persistent refresh session + PWA',
-  note:'Supabase 이메일 템플릿 수정이 막혀 있어도 기본 Sign in 링크로 로그인합니다. 같은 기기에서는 이후 refresh token으로 세션을 자동 갱신합니다.'
+  mode:'Vercel API proxy + approved email + access code + persistent app session + PWA',
+  note:'Supabase 이메일 발송과 Magic Link를 사용하지 않습니다. 승인된 이메일과 베타 접속코드로 PC/모바일에서 바로 접속합니다.'
 };
 function readableSupabaseError(error){
   const parts=[];
@@ -117,6 +117,18 @@ async function requestLoginEmail(email){
   const clean=normalizeEmail(email);
   if(!clean)throw new Error('이메일을 입력해 주세요.');
   return apiPost('/api/send-login-link',{email:clean,redirectTo:authRedirectUrl()});
+}
+
+async function requestAccessLogin(email, accessCode){
+  const clean=normalizeEmail(email);
+  if(!clean)throw new Error('이메일을 입력해 주세요.');
+  if(!String(accessCode||'').trim())throw new Error('접속코드를 입력해 주세요.');
+  return apiPost('/api/access-login',{mode:'login',email:clean,access_code:String(accessCode||'').trim()});
+}
+async function verifyAccessSession(session){
+  const token=String(session?.access_token||'').trim();
+  if(!token)throw new Error('저장된 접속 세션이 없습니다.');
+  return apiPost('/api/access-login',{mode:'verify',access_token:token});
 }
 
 async function requestRefreshSession(session){
@@ -253,89 +265,64 @@ function AuthGate({children}){
   const [error,setError]=useState('');
   const [errorDetail,setErrorDetail]=useState('');
   const [session,setSession]=useState(null);
-  const sessionRef=useRef(null);
   const [formEmail,setFormEmail]=useState('');
-  const [otpEmail,setOtpEmail]=useState('');
+  const [accessCode,setAccessCode]=useState('');
   const [copiedAddress,setCopiedAddress]=useState(false);
-  useEffect(()=>{ sessionRef.current=session; },[session]);
-  useEffect(()=>{
-    if(status!=='allowed' || !session?.refresh_token)return undefined;
-    const timer=setInterval(async()=>{
-      try{
-        const current=sessionRef.current;
-        if(!current?.refresh_token)return;
-        const next=await requestRefreshSession(current);
-        writeAuthSession(next);
-        sessionRef.current=next;
-        setSession(next);
-      }catch(e){
-        console.warn('자동 세션 갱신 실패',e);
-      }
-    },45*60*1000);
-    return ()=>clearInterval(timer);
-  },[status,session?.refresh_token]);
+
   useEffect(()=>{
     let cancelled=false;
     async function boot(){
       setStatus('checking');
       setError('');
       try{
-        const hashSession=parseAuthHash();
-        let saved=hashSession||readAuthSession();
-        if(!saved?.access_token){setStatus('signedOut');return;}
-        writeAuthSession(saved);
-        let activeSession=await getFreshSession(saved);
-        let user;
-        try{
-          user=await getAuthUser(activeSession);
-        }catch(authError){
-          if(activeSession?.refresh_token){
-            activeSession=await requestRefreshSession(activeSession);
-            writeAuthSession(activeSession);
-            user=await getAuthUser(activeSession);
-          }else{
-            throw authError;
-          }
-        }
-        const userEmail=normalizeEmail(user?.email);
-        if(!userEmail)throw new Error('로그인 이메일을 확인하지 못했습니다.');
-        const allowed=await checkAllowedBuyer(userEmail,activeSession);
+        // 기존 Magic Link 해시가 남아 있어도 BASIC 1.25에서는 사용하지 않습니다.
+        if(window.location.hash?.includes('access_token=')) history.replaceState(null,'',window.location.pathname+window.location.search);
+        const saved=readAuthSession();
+        if(!saved?.access_token||saved?.token_type!=='app'){setStatus('signedOut');return;}
+        const data=await verifyAccessSession(saved);
         if(cancelled)return;
-        setSession(activeSession);
-        setEmail(userEmail);
-        if(allowed){setBuyer(allowed);setStatus('allowed');}
-        else{setBuyer(null);setStatus('notAllowed');}
+        const nextSession=data?.session||saved;
+        writeAuthSession(nextSession);
+        setSession(nextSession);
+        setEmail(normalizeEmail(data?.email||data?.buyer?.email||nextSession?.user?.email));
+        setBuyer(data?.buyer||null);
+        setStatus('allowed');
       }catch(e){
         if(cancelled)return;
-        console.warn('인증 확인 실패',e);
+        console.warn('접속 세션 확인 실패',e);
         clearAuthSession();
         setSession(null);setEmail('');setBuyer(null);setStatus('signedOut');
-        setError('로그인 확인에 실패했습니다. 다시 로그인해 주세요.');
-        setErrorDetail(readableSupabaseError(e));
       }
     }
     boot();
     return ()=>{cancelled=true};
   },[]);
-  async function sendLogin(e){
+
+  async function loginWithCode(e){
     e?.preventDefault?.();
     setError('');setErrorDetail('');setMessage('');
-    const clean=normalizeEmail(formEmail||otpEmail);
-    if(!clean){setError('구매 시 등록한 이메일을 입력해 주세요.');return;}
+    const clean=normalizeEmail(formEmail);
+    if(!clean){setError('승인된 이메일을 입력해 주세요.');return;}
+    if(!accessCode.trim()){setError('관리자에게 받은 접속코드를 입력해 주세요.');return;}
     setStatus('sending');
     try{
-      await requestLoginEmail(clean);
-      setOtpEmail(clean);
-      setFormEmail(clean);
-      setStatus('emailSent');
-      setMessage(`${clean} 주소로 로그인 인증 메일을 보냈습니다. 메일의 Sign in 링크를 이 기기의 Safari/Chrome에서 열어 주세요. 이미 누른 링크는 다시 쓰지 말고, 새 메일이 도착할 때까지 잠시 기다려 주세요.`);
+      const data=await requestAccessLogin(clean,accessCode);
+      const nextSession=data?.session;
+      if(!nextSession?.access_token)throw new Error('접속 세션을 만들지 못했습니다.');
+      writeAuthSession(nextSession);
+      setSession(nextSession);
+      setEmail(normalizeEmail(data?.email||clean));
+      setBuyer(data?.buyer||null);
+      setStatus('allowed');
+      setMessage('접속되었습니다. 개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요.');
     }catch(e){
       console.error(e);
       setStatus('signedOut');
-      setError('로그인 인증 메일 발송에 실패했습니다. 아래 상세 오류를 확인해 주세요.');
+      setError('접속에 실패했습니다. 이메일 승인 여부와 접속코드를 확인해 주세요.');
       setErrorDetail(readableSupabaseError(e));
     }
   }
+
   async function copyAppAddress(){
     try{
       await copyTextToClipboard(appHomeUrl());
@@ -345,16 +332,17 @@ function AuthGate({children}){
       alert(`아래 작성기 주소를 복사해 주세요.\n\n${appHomeUrl()}`);
     }
   }
+
   function signOut(){
     clearAuthSession();
-    setSession(null);setBuyer(null);setEmail('');setOtpEmail('');setOtpCode('');setMessage('');setError('');setErrorDetail('');setStatus('signedOut');
+    setSession(null);setBuyer(null);setEmail('');setMessage('');setError('');setErrorDetail('');setStatus('signedOut');
   }
-  if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>구매자 인증을 확인하고 있습니다.</p></div></div>;
-  if(status==='setup')return <div className="auth-screen"><div className="auth-card wide"><div className="auth-logo">✚</div><h1>Supabase 설정이 필요합니다</h1><p>Vercel 환경변수에 아래 값을 등록한 뒤 다시 배포해 주세요.</p><pre>VITE_SUPABASE_URL\nVITE_SUPABASE_ANON_KEY</pre><small>이 화면은 관리자 설정용입니다. 구매자에게 배포하기 전 환경변수를 반드시 등록해야 합니다.</small></div></div>;
-  if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 시 등록한 이메일로 다시 로그인해 주세요. 계속 문제가 있다면 판매자에게 문의해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 로그인</button></div></div></div>;
-  if(status==='signedOut'||status==='sending'||status==='emailSent')return <div className="auth-screen"><form className="auth-card" onSubmit={sendLogin}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>승인된 이메일로 기기별 최초 1회만 로그인해 주세요. 현재 Supabase 이메일 템플릿 수정이 막혀 있어 <b>기본 Sign in 링크</b> 방식으로 로그인합니다.</p><label className="auth-field"><span>구매자 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'처리 중…':status==='emailSent'?'로그인 인증 메일 다시 받기':'로그인 인증 메일 받기'}</button>{status==='emailSent'&&<div className="auth-mobile-help"><b>모바일에서 여는 방법</b><ol><li>메일 앱에서 새로 도착한 Supabase Sign in 메일을 엽니다.</li><li>Sign in 링크를 길게 누른 뒤 Safari 또는 Chrome에서 열어 주세요.</li><li>PC에서 받은 링크를 모바일에서 다시 누르지 마세요. 기기별로 새 메일을 받아야 안정적입니다.</li></ol><button type="button" onClick={()=>{setStatus('signedOut');setOtpEmail('');setMessage('');setError('');setErrorDetail('');}}>이메일 다시 입력</button></div>}{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>Redirect URL: <code>{authRedirectUrl()}</code></p></details><small>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요. 같은 기기에서는 다음부터 인증 메일을 다시 받지 않아도 됩니다. 공용 PC에서만 로그아웃하세요.</small></form></div>;
+
+  if(status==='checking')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>교회문서키트 BASIC</h1><p>접속 권한을 확인하고 있습니다.</p></div></div>;
+  if(status==='notAllowed')return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">✚</div><h1>등록된 구매자 이메일이 아닙니다</h1><p><b>{email}</b></p><p>구매 또는 베타 승인된 이메일로 다시 접속해 주세요.</p><div className="auth-actions"><button onClick={signOut}>다른 이메일로 접속</button></div></div></div>;
+  if(status==='signedOut'||status==='sending')return <div className="auth-screen"><form className="auth-card" onSubmit={loginWithCode}><div className="auth-logo">✚</div><h1>교회문서키트 BASIC 작성기</h1><p>모바일에서 메일 로그인 문제가 반복되어, 베타 기간에는 <b>승인 이메일 + 접속코드</b> 방식으로 들어갑니다. 메일을 열지 않아도 됩니다.</p><label className="auth-field"><span>승인된 이메일</span><input type="email" value={formEmail} onChange={e=>setFormEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" disabled={status==='sending'}/></label><label className="auth-field"><span>접속코드</span><input type="password" value={accessCode} onChange={e=>setAccessCode(e.target.value)} placeholder="관리자에게 받은 접속코드" autoComplete="current-password" disabled={status==='sending'}/></label><button className="auth-primary" disabled={status==='sending'}>{status==='sending'?'확인 중…':'접속하기'}</button><div className="auth-mobile-help"><b>모바일 안내</b><ol><li>휴대폰에서도 같은 주소로 접속합니다.</li><li>승인된 이메일과 접속코드만 입력하면 됩니다.</li><li>개인 기기에서는 로그아웃하지 말고 창만 닫아 주세요.</li></ol></div>{message&&<div className="auth-message">{message}</div>}{error&&<div className="auth-error">{error}{errorDetail&&<><br/><br/><b>상세 오류</b><br/>{errorDetail}</>}</div>}<details className="auth-debug"><summary>관리자용 설정 확인</summary><p>인증 방식: <code>{AUTH_DEBUG_INFO.mode}</code></p><p>설명: <code>{AUTH_DEBUG_INFO.note}</code></p><p>필요 환경변수: <code>BETA_ACCESS_CODE</code></p></details><small>관리자는 Vercel 환경변수에 BETA_ACCESS_CODE를 추가해 주세요. 이 값이 베타테스터 공통 접속코드가 됩니다.</small></form></div>;
   const authInfo={email,buyer,session,signOut};
-  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'구매자'}</b> · {email} · {buyer?.plan||'basic'}<em>이 기기 자동 로그인 유지 중</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 이 기기에서는 다음 접속 시 이메일 링크 인증이 다시 필요합니다. 개인 기기라면 로그아웃하지 않는 것을 권장합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{React.isValidElement(children)?React.cloneElement(children,{auth:authInfo}):children}</>;
+  return <><div className="auth-user-bar"><span><b>{buyer?.church_name||'사용자'}</b> · {email} · {buyer?.plan||'basic'}<em>이 기기 자동 접속 유지 중</em></span><button className="auth-copy" onClick={copyAppAddress}>{copiedAddress?'주소 복사됨':'작성기 주소 복사'}</button><button className="auth-logout" onClick={()=>{if(confirm('공용 PC에서 사용을 마치셨나요? 로그아웃하면 이 기기에서는 다음 접속 시 이메일과 접속코드를 다시 입력해야 합니다. 개인 기기라면 로그아웃하지 않는 것을 권장합니다.'))signOut();}}>공용 PC에서 로그아웃</button></div><PwaInstallBanner />{React.isValidElement(children)?React.cloneElement(children,{auth:authInfo}):children}</>;
 }
 
 const DEPARTMENTS=['선교부','교육부','문화부','예배부','사회봉사부','관리부','재정부','속회','소그룹','청년부','기타'];
@@ -3333,7 +3321,7 @@ function DashboardSettingsPanel({auth,onOpenWriter}){
       <article><h3>개인 기기 사용</h3><p>개인 PC와 본인 휴대폰에서는 로그아웃하지 말고 창만 닫아 주세요.</p><small>같은 기기에서는 세션이 유지되어 다시 접속이 쉬워집니다.</small></article>
       <article><h3>공용 PC 사용</h3><p>교회 공용 PC나 다른 사람의 기기에서는 사용 후 로그아웃해 주세요.</p><small>개인정보와 문서 내용을 보호하기 위한 설정입니다.</small></article>
       <article><h3>클라우드 저장</h3><p>내 문서 저장을 쓰려면 Supabase SQL Editor에서 user_documents 테이블을 먼저 만들어야 합니다.</p><small>파일: supabase_cloud_documents.sql</small></article>
-      <article><h3>모바일 로그인</h3><p>새 휴대폰이나 새 브라우저에서는 최초 1회 이메일 Sign in 링크 인증이 필요합니다.</p><small>메일 발송 한도 문제가 반복되거나 6자리 코드 로그인을 쓰려면 Custom SMTP 설정이 필요합니다.</small></article>
+      <article><h3>모바일 로그인</h3><p>새 휴대폰이나 새 브라우저에서는 승인 이메일과 접속코드를 입력하면 됩니다.</p><small>베타 기간에는 메일 로그인 없이 접속코드 방식으로 사용합니다.</small></article>
       <article><h3>출력 권장 환경</h3><p>PDF/PNG 저장은 PC 또는 노트북 환경이 가장 안정적입니다.</p><small>모바일은 신청·확인·간단 수정 용도로 권장합니다.</small></article>
     </div>
   </section>
@@ -3622,8 +3610,8 @@ function BuiltInGuideModal({type,onClose,onJump}){
       </div>
       <div className="guide-grid">
         <section><h3>현재 문서 사용 팁</h3><ul>{tips.map((t,i)=><li key={i}>{t}</li>)}</ul></section>
-        <section><h3>저장·접속 안내</h3><ul><li>메일의 Sign in 링크는 로그인용 임시 링크입니다.</li><li>계속 사용할 주소는 작성기 기본 주소입니다.</li><li>개인 PC에서는 로그아웃하지 않고 창만 닫아도 됩니다.</li><li>PC와 모바일을 함께 쓰려면 “PC·모바일 이어쓰기”에서 클라우드 저장 후 다른 기기에서 불러오세요.</li><li>공용 PC에서는 “공용 PC에서 로그아웃”을 눌러 주세요.</li></ul><div className="guide-url"><code>{homeUrl}</code></div></section>
-        <section><h3>자주 묻는 질문</h3><dl><dt>매번 이메일 로그인해야 하나요?</dt><dd>개인 PC에서는 로그아웃하지 않으면 로그인 상태가 유지됩니다.</dd><dt>일정표가 많으면 어떻게 하나요?</dt><dd>행사 및 수련회 기획안에서 일정표 출력 방식을 “일차별 여유형”으로 선택하세요.</dd><dt>글씨가 표 밖으로 나가면요?</dt><dd>문서 기본도구에서 글자 크기를 작게 조정하거나 문장을 짧게 나눠 주세요.</dd></dl></section>
+        <section><h3>저장·접속 안내</h3><ul><li>베타 기간에는 승인 이메일과 접속코드로 접속합니다.</li><li>계속 사용할 주소는 작성기 기본 주소입니다.</li><li>개인 PC와 본인 휴대폰에서는 로그아웃하지 않고 창만 닫아도 됩니다.</li><li>PC와 모바일을 함께 쓰려면 “PC·모바일 이어쓰기”에서 클라우드 저장 후 다른 기기에서 불러오세요.</li><li>공용 PC에서는 “공용 PC에서 로그아웃”을 눌러 주세요.</li></ul><div className="guide-url"><code>{homeUrl}</code></div></section>
+        <section><h3>자주 묻는 질문</h3><dl><dt>매번 이메일 로그인해야 하나요?</dt><dd>개인 PC와 본인 휴대폰에서는 로그아웃하지 않으면 접속 상태가 유지됩니다.</dd><dt>일정표가 많으면 어떻게 하나요?</dt><dd>행사 및 수련회 기획안에서 일정표 출력 방식을 “일차별 여유형”으로 선택하세요.</dd><dt>글씨가 표 밖으로 나가면요?</dt><dd>문서 기본도구에서 글자 크기를 작게 조정하거나 문장을 짧게 나눠 주세요.</dd></dl></section>
         <section><h3>바로 이동</h3><div className="guide-actions"><button type="button" onClick={()=>onJump?.('.edit-drawer',true)}>문서 편집판 열기</button><button type="button" onClick={()=>onJump?.('.preview-pane')}>미리보기 보기</button><button type="button" onClick={()=>onJump?.('.document-ribbon')}>저장 메뉴 보기</button></div></section>
       </div>
     </div>
@@ -4080,7 +4068,7 @@ function BetaAdminPage(){
   }
   function mailText(app){
     const base=appHomeUrl().replace(/\/admin\/?$/,'');
-    return `안녕하세요. ${app.name||''}님.\n\n교회문서키트 BASIC 베타테스터로 선정되셨습니다.\n아래 작성기 주소로 접속하신 뒤, 신청하신 이메일(${app.email})로 로그인해 주세요.\n\n작성기 주소:\n${base}\n\n사용 방법:\n1. 작성기 주소에 접속합니다.\n2. 신청하신 이메일을 입력합니다.\n3. 이메일로 도착한 Sign in 링크를 클릭합니다.\n4. 작성기 화면이 열리면 문서를 선택해 작성합니다.\n5. PDF 또는 PNG로 저장해봅니다.\n\n중요 안내:\n- 메일로 온 Sign in 링크는 임시 로그인용입니다.\n- 로그인 후에는 작성기 기본 주소를 즐겨찾기 또는 바탕화면 바로가기로 저장해 주세요.\n- 개인 PC에서는 로그아웃하지 않고 창만 닫으셔도 됩니다.\n- 공용 PC에서 사용하신 경우에만 “공용 PC에서 로그아웃”을 눌러주세요.\n\n감사합니다.`;
+    return `안녕하세요. ${app.name||''}님.\n\n교회문서키트 BASIC 베타테스터로 선정되셨습니다.\n아래 작성기 주소로 접속하신 뒤, 신청하신 이메일(${app.email})과 안내받은 접속코드로 접속해 주세요.\n\n작성기 주소:\n${base}\n\n사용 방법:\n1. 작성기 주소에 접속합니다.\n2. 신청하신 이메일을 입력합니다.\n3. 관리자가 안내한 접속코드를 입력합니다.\n4. 작성기 화면이 열리면 문서를 선택해 작성합니다.\n5. PDF 또는 PNG로 저장해봅니다.\n\n중요 안내:\n- 베타 기간에는 승인 이메일과 접속코드로 접속합니다.\n- 접속 후에는 작성기 기본 주소를 즐겨찾기 또는 바탕화면 바로가기로 저장해 주세요.\n- 개인 PC와 본인 휴대폰에서는 로그아웃하지 않고 창만 닫으셔도 됩니다.\n- 공용 PC에서 사용하신 경우에만 “공용 PC에서 로그아웃”을 눌러주세요.\n\n감사합니다.`;
   }
   async function copyMail(app){
     try{await copyTextToClipboard(mailText(app));setCopiedId(app.id);setTimeout(()=>setCopiedId(''),1800)}

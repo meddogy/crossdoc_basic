@@ -1,4 +1,4 @@
-import { methodGuard, readJson, sendJson, supabaseRequest, serviceRoleRequest, serializeError } from '../lib/_supabase.js';
+import { methodGuard, readJson, sendJson, supabaseRequest, serviceRoleRequest, serializeError, verifyAppSessionToken } from '../lib/_supabase.js';
 
 function normalizeEmail(email) { return String(email || '').trim().toLowerCase(); }
 function cleanText(value, max = 120) { return String(value || '').trim().slice(0, max); }
@@ -9,6 +9,23 @@ function toArray(value) {
 
 async function getAllowedEmail(accessToken) {
   if (!accessToken) { const e = new Error('로그인 토큰이 없습니다.'); e.status = 401; throw e; }
+
+  // BASIC 1.25: 모바일 안정화를 위해 Supabase Magic Link 대신 앱 자체 접속 세션을 우선 사용합니다.
+  // 기존 Supabase Auth 토큰이 남아 있는 경우를 위해 fallback은 유지합니다.
+  try {
+    const payload = verifyAppSessionToken(accessToken);
+    const email = normalizeEmail(payload?.email);
+    if (!email) { const e = new Error('앱 세션 이메일을 확인하지 못했습니다.'); e.status = 401; throw e; }
+    const rows = await serviceRoleRequest('/rest/v1/allowed_users', {
+      query: { select: 'email,active,plan', email: `eq.${email}`, active: 'eq.true', limit: '1' },
+    });
+    if (!Array.isArray(rows) || !rows.length) { const e = new Error('등록된 사용자 이메일이 아닙니다.'); e.status = 403; throw e; }
+    return email;
+  } catch (sessionError) {
+    // 앱 세션 토큰이 아니라면 기존 Supabase Auth 토큰으로 한번 더 확인합니다.
+    if (String(accessToken).includes('.')) throw sessionError;
+  }
+
   const user = await supabaseRequest('/auth/v1/user', { token: accessToken });
   const email = normalizeEmail(user?.email);
   if (!email) { const e = new Error('로그인 이메일을 확인하지 못했습니다.'); e.status = 401; throw e; }
